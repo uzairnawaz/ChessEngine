@@ -16,6 +16,11 @@ typedef struct CastleAbility {
     bool bQueenside = false;
 };
 
+typedef struct Move {
+    Square from;
+    Square to;
+};
+
 class Chessboard
 {
 private:
@@ -38,6 +43,22 @@ private:
     int halfMoveClock;
     int fullMoveNumber;
 
+    /***
+     * Generate all pseudolegal moves for the current position
+     */
+    Move* generateAllPseudolegalMoves();
+
+    /***
+     * The following functions generate all pseudo legal moves for the given piece type and store
+     * the generated moves in outMoveArray.
+     */
+    void generatePawnMoves(Move* outMoveArray);
+    void generateKnightMoves(Move* outMoveArray);
+    void generateBishopMoves(Move* outMoveArray);
+    void generateRookMoves(Move* outMoveArray);
+    void generateQueenMoves(Move* outMoveArray);
+    void generateKingMoves(Move* outMoveArray);
+
 public:
     /***
      * Initialize a chess board with the normal starting position
@@ -49,5 +70,9 @@ public:
      */
     Chessboard(std::string fen);
 
+    /***
+     * Generate all legal moves for the current position
+     */
+    //Moves* generateAllLegalMoves();
 };
 

@@ -18,18 +18,18 @@
     <ClCompile Include="ChessEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BitBoard.cpp">
+    <ClCompile Include="Bitboard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ChessBoard.cpp">
+    <ClCompile Include="Chessboard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BitBoard.h">
+    <ClInclude Include="Bitboard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ChessBoard.h">
+    <ClInclude Include="Chessboard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

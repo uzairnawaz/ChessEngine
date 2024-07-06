@@ -127,13 +127,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BitBoard.cpp" />
-    <ClCompile Include="ChessBoard.cpp" />
+    <ClCompile Include="Bitboard.cpp" />
+    <ClCompile Include="Chessboard.cpp" />
     <ClCompile Include="ChessEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BitBoard.h" />
-    <ClInclude Include="ChessBoard.h" />
+    <ClInclude Include="Bitboard.h" />
+    <ClInclude Include="Chessboard.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -112,3 +112,8 @@ Chessboard::Chessboard(std::string fen) {
     halfMoveClock = std::stoi(halfMoveClockAndNumMoves.substr(0, spaceIdx));
     fullMoveNumber = std::stoi(halfMoveClockAndNumMoves.substr(spaceIdx));
 }
+
+
+Chessboard::generatePawnMoves() {
+
+}
