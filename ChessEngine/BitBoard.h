@@ -21,6 +21,18 @@ typedef uint64_t Bitboard;
  */
 
 const int NUM_SQUARES = 64;
+const int MAX_ROOK_ATTACK_SETS = 4096;
+const int MAX_BISHOP_ATTACK_SETS = 512;
+
+enum Rank : uint8_t {
+    RANK_1, RANK_2, RANK_3, RANK_4,
+    RANK_5, RANK_6, RANK_7, RANK_8
+};
+
+enum File : uint8_t {
+    FILE_A, FILE_B, FILE_C, FILE_D,
+    FILE_E, FILE_F, FILE_G, FILE_H
+};
 
 enum Square: uint8_t {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
@@ -35,19 +47,11 @@ enum Square: uint8_t {
 };
 
 namespace Squares {
-    Square fromRankFile(Rank r, File f) { return (Square)(r * 8 + f); };
-    Square fromAlgebraic(const char algebraic[2]) { return fromRankFile(algebraic[1] - '1', algebraic[0] - 'a'); }
+    inline Square fromRankFile(int r, int f) { return (Square)(r * 8 + f); };
+    inline Square fromAlgebraic(const char algebraic[2]) { return fromRankFile(algebraic[1] - '1', algebraic[0] - 'a'); }
+    inline Rank getRank(Square s) { return (Rank)(s / 8); }
+    inline File getFile(Square s) { return (File)(s % 8); }
 }
-
-enum Rank : uint8_t {
-    RANK_1, RANK_2, RANK_3, RANK_4,
-    RANK_5, RANK_6, RANK_7, RANK_8
-};
-
-enum File : uint8_t {
-    FILE_A, FILE_B, FILE_C, FILE_D,
-    FILE_E, FILE_F, FILE_G, FILE_H
-};
 
 namespace Bitboards {
 
@@ -55,35 +59,42 @@ namespace Bitboards {
      * Create a bitboard that contains a single 1 at the specified coordinate.
      * The rest of the board is filled with 0s.
      */
-    Bitboard oneAt(Square s);
+    inline Bitboard oneAt(Square s) { return ((Bitboard)1) << s; };
 
     /***
      * Check if a piece is present at the given x and y coordinates.
      * X and Y are 0-indexed, starting from the bottom left corner of the board.
      */
-    bool contains(Bitboard b, Square s);
+    inline bool contains(Bitboard b, Square s) { return b & oneAt(s); }
 
-    const Bitboard RANKS[] = {
-        0x00000000000000ff,
-        0x000000000000ff00,
-        0x0000000000ff0000,
-        0x00000000ff000000,
-        0x000000ff00000000,
-        0x0000ff0000000000,
-        0x00ff000000000000,
-        0xff00000000000000,
-    };
+    /***
+     * Pops the least significant bit from a given bitboard.
+     * Returns the square that the popped bit was found at.
+     */
+    Square popLSB(Bitboard& b);
 
-    const Bitboard FILES[] = {
-        0x0101010101010101,
-        0x0202020202020202,
-        0x0404040404040404,
-        0x0808080808080808,
-        0x1010101010101010,
-        0x2020202020202020,
-        0x4040404040404040,
-        0x8080808080808080,
-    };
+    /***
+     * Initializes move bitboards for each piece type
+     */
+    void initPieceMoveBoards();
+
+    /***
+     * Generates a table of magic bitboards for sliding pieces
+     */
+    void generateMagics();
+
+    /***
+     * Returns the bitboard containing the moves for a rook given a set of blockers.
+     */
+    Bitboard getRookMoveTable(Square sq, Bitboard blockers);
+
+    /***
+     * Returns the bitboard containing the moves for a bishop given a set of blockers.
+     */
+    Bitboard getBishopMoveTable(Square sq, Bitboard blockers);
+
+    extern const Bitboard RANKS[];
+    extern const Bitboard FILES[];
 
     /*
      * Defined so that rank + file of a square gives you its index in this array
@@ -91,23 +102,7 @@ namespace Bitboards {
      *     rank: 2 (0-indexed), file: 1  --> 1 + 2 = 3
      * DIAGONALS_NW[3] will contain the bitboard of the diagonal that crosses through b3
      */
-    const Bitboard DIAGONALS_NW[] = {
-        0x0000000000000001,
-        0x0000000000000102,
-        0x0000000000010204,
-        0x0000000001020408,
-        0x0000000102040810,
-        0x0000010204081020,
-        0x0001020408102040,
-        0x0102040810204080,
-        0x0204081020408000,
-        0x0408102040800000,
-        0x0810204080000000,
-        0x1020408000000000,
-        0x2040800000000000,
-        0x4080000000000000,
-        0x8000000000000000
-    };
+    extern const Bitboard DIAGONALS_NW[];
 
     /*
      * Defined so that (8 - rank) + file of a square gives you its index in this array
@@ -115,37 +110,26 @@ namespace Bitboards {
      *     rank: 2 (0-indexed), file: 1  --> (8 - 2) + 1 = 7
      * DIAGONALS_NE[7] will contain the bitboard of the diagonal that crosses through b3
      */
-    const Bitboard DIAGONALS_NE[] = {
-        0x0100000000000000,
-        0x0201000000000000,
-        0x0402010000000000,
-        0x0804020100000000,
-        0x1008040201000000,
-        0x2010080402010000,
-        0x4020100804020100,
-        0x8040201008040201,
-        0x0080402010080402,
-        0x0000804020100804,
-        0x0000008040201008,
-        0x0000000080402010,
-        0x0000000000804020,
-        0x0000000000008040,
-        0x0000000000000080
+    extern const Bitboard DIAGONALS_NE[];
+
+    extern Bitboard ROOK_MASKS[NUM_SQUARES];
+    extern Bitboard BISHOP_MASKS[NUM_SQUARES];
+
+    extern Bitboard KNIGHT_MOVES[NUM_SQUARES];
+    extern Bitboard KING_MOVES[NUM_SQUARES];
+
+    extern Bitboard PAWN_MOVES_WHITE[NUM_SQUARES];
+    extern Bitboard PAWN_ATTACKS_WHITE[NUM_SQUARES];
+    extern Bitboard PAWN_MOVES_BLACK[NUM_SQUARES];
+    extern Bitboard PAWN_ATTACKS_BLACK[NUM_SQUARES];
+
+    struct Magic {
+        Bitboard magic;
+        int shift;
     };
+    extern Magic ROOK_MAGICS[NUM_SQUARES];
+    extern Magic BISHOP_MAGICS[NUM_SQUARES];
 
-    Bitboard ROOK_MOVES[NUM_SQUARES];
-    Bitboard BISHOP_MOVES[NUM_SQUARES];
-    Bitboard KNIGHT_MOVES[NUM_SQUARES];
-    Bitboard KING_MOVES[NUM_SQUARES];
-
-    Bitboard PAWN_MOVES_WHITE[NUM_SQUARES];
-    Bitboard PAWN_ATTACKS_WHITE[NUM_SQUARES];
-    Bitboard PAWN_MOVES_BLACK[NUM_SQUARES];
-    Bitboard PAWN_ATTACKS_BLACK[NUM_SQUARES];
-
-    /***
-     * Initializes move bitboards for each piece type
-     */
-    void initPieceMoveBoards();
-
+    extern Bitboard ROOK_MOVES[NUM_SQUARES][MAX_ROOK_ATTACK_SETS];
+    extern Bitboard BISHOP_MOVES[NUM_SQUARES][MAX_BISHOP_ATTACK_SETS];
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <stdio.h>
 
 #include "Bitboard.h"
 
@@ -9,14 +10,14 @@
  * ex: 
  *  wKingside - true if white can castle kingside
  */
-typedef struct CastleAbility {
+struct CastleAbility {
     bool wKingside = false;
     bool wQueenside = false;
     bool bKingside = false;
     bool bQueenside = false;
 };
 
-typedef struct Move {
+struct Move {
     Square from;
     Square to;
 };
@@ -46,7 +47,7 @@ private:
     /***
      * Generate all pseudolegal moves for the current position
      */
-    Move* generateAllPseudolegalMoves();
+    //Move* generateAllPseudolegalMoves();
 
     /***
      * The following functions generate all pseudo legal moves for the given piece type and store
@@ -55,9 +56,19 @@ private:
     void generatePawnMoves(Move* outMoveArray);
     void generateKnightMoves(Move* outMoveArray);
     void generateBishopMoves(Move* outMoveArray);
-    void generateRookMoves(Move* outMoveArray);
-    void generateQueenMoves(Move* outMoveArray);
+    //void generateRookMoves(Move* outMoveArray);
+    //void generateQueenMoves(Move* outMoveArray);
     void generateKingMoves(Move* outMoveArray);
+
+    /***
+     * Return a bitboard containing all of the pieces on the board.
+     */
+    Bitboard getAllPieces() { return getAllPiecesByColor(true) | getAllPiecesByColor(false); }
+
+    /***
+     * Return a bitboard containing all of the pieces of a certain color
+     */
+    Bitboard getAllPiecesByColor(bool isWhite);
 
 public:
     /***
@@ -69,6 +80,11 @@ public:
      * Load a chess game state from a FEN string
      */
     Chessboard(std::string fen);
+
+    /***
+     * Display board to console, used for debugging
+     */
+    void display();
 
     /***
      * Generate all legal moves for the current position

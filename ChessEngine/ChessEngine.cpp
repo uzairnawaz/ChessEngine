@@ -3,9 +3,12 @@
 
 #include <iostream>
 
+#include "Chessboard.h"
+
 int main()
 {
-    std::cout << "Hello World!\n";
+    Chessboard c;
+    c.display();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

@@ -130,6 +130,7 @@
     <ClCompile Include="Bitboard.cpp" />
     <ClCompile Include="Chessboard.cpp" />
     <ClCompile Include="ChessEngine.cpp" />
+    <ClCompile Include="magics.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitboard.h" />
