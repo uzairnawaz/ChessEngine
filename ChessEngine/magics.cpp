@@ -67,7 +67,7 @@ namespace Bitboards {
      * Iterate through all possible blocker bitboards and builds magic table for a specified piece type.
      * Returns whether or not the candidate is a valid magic.
      */
-    bool tryMakeMagicTable(Square sq, Magic candidate, bool isRook) {
+    bool tryMakeMagicTable(Square sq, Magic candidate, std::vector<Bitboard>& calculatedMovesForAllBlockers, bool isRook) {
         /*
         * To iterate through all permutations of n bits, we can simply
         * iterate from 0 - 2^n
@@ -93,27 +93,54 @@ namespace Bitboards {
         *     ((b + (-m - 1)) + 1) & m = (b - m) & m
         */
         Bitboard mask = isRook ? ROOK_MASKS[sq] : BISHOP_MASKS[sq];
-        Bitboard* attackTable = isRook ? ROOK_MOVES[sq] : BISHOP_MOVES[sq];
+
+        Bitboard* outMoveTable = isRook ? ROOK_MOVES[sq] : BISHOP_MOVES[sq];
         bool usedIndices[MAX_ROOK_ATTACK_SETS] = { }; // since MAX_ROOK_ATTACK_SETS > MAX_BISHOP_ATTACK_SETS, this will ensure we always have enough space
 
         Bitboard blockers = 0;
+        int counter = 0;
         do {
             int idx = (candidate.magic * blockers) >> candidate.shift;
-            Bitboard moves = isRook ? calcRookMoves(sq, blockers) : calcBishopMoves(sq, blockers);
-            if (usedIndices[idx] && attackTable[idx] != moves) {
+            Bitboard moves = calculatedMovesForAllBlockers[counter];
+            if (usedIndices[idx] && outMoveTable[idx] != moves) {
                 /*
                 * if some other blocker set hashed to this index but had a different move set, then
                 * this magic is invalid (hash collision)
                 */
                 return false;
             }
-            attackTable[idx] = moves;
+            outMoveTable[idx] = moves;
             usedIndices[idx] = true;
 
             blockers = (blockers - mask) & mask;
+            counter++;
         } while (blockers != 0); // blockers will reset back to 0 after iterating up to mask: (b - m) & m is 0 when b = m
 
+        // this magic works! add it to our magic array:
+        if (isRook) {
+            ROOK_MAGICS[sq] = candidate;
+        }
+        else {
+            BISHOP_MAGICS[sq] = candidate;
+        }
+
         return true;
+    }
+
+    /***
+     * Returns a vector of bitboards representing the possible moves of a given piece (rook/bishop) at a starting square
+     * for all possible combinations of blockers.
+     */
+    std::vector<Bitboard>& generateMovesForAllBlockers(Square sq, bool isRook) {
+        Bitboard blockers = 0;
+        Bitboard mask = isRook ? ROOK_MASKS[sq] : BISHOP_MASKS[sq];
+        std::vector<Bitboard>* movesForAllBlockers = new std::vector<Bitboard>();
+        do {
+            movesForAllBlockers->push_back(isRook ? calcRookMoves(sq, blockers) : calcBishopMoves(sq, blockers));
+            blockers = (blockers - mask) & mask;
+        } while (blockers != 0);
+        
+        return *movesForAllBlockers;
     }
 
     void generateMagics() {
@@ -125,6 +152,8 @@ namespace Bitboards {
                 bool foundRookMagic = false;
                 bool foundBishopMagic = false;
                 Square sq = Squares::fromRankFile(rank, file);
+                std::vector<Bitboard> rookMovesForAllBlockers = generateMovesForAllBlockers(sq, true);
+                std::vector<Bitboard> bishopMovesForAllBlockers = generateMovesForAllBlockers(sq, false);
                 while (!foundRookMagic || !foundBishopMagic) {
                     // generate a random number with low # set bits
                     candidate.magic = dist(rng) & dist(rng) & dist(rng);
@@ -133,14 +162,14 @@ namespace Bitboards {
                         // count number of bits in rook mask
                         int numBitsInMask = __popcnt64(ROOK_MASKS[sq]);
                         candidate.shift = NUM_SQUARES - numBitsInMask;
-                        foundRookMagic = tryMakeMagicTable(sq, candidate, true);
+                        foundRookMagic = tryMakeMagicTable(sq, candidate, rookMovesForAllBlockers, true);
                     }
 
                     if (!foundBishopMagic) {
                         // count number of bits in bishop mask
                         int numBitsInMask = __popcnt64(BISHOP_MASKS[sq]);
                         candidate.shift = NUM_SQUARES - numBitsInMask;
-                        foundBishopMagic = tryMakeMagicTable(sq, candidate, false);
+                        foundBishopMagic = tryMakeMagicTable(sq, candidate, bishopMovesForAllBlockers, false);
                     }
                 }
 

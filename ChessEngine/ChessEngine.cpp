@@ -7,8 +7,11 @@
 
 int main()
 {
+
+    Bitboards::initPieceMoveBoards();
     Chessboard c;
     c.display();
+    c.generateAllPseudolegalMoves(false);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

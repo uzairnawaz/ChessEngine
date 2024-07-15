@@ -105,10 +105,10 @@ namespace Bitboards {
     extern const Bitboard DIAGONALS_NW[];
 
     /*
-     * Defined so that (8 - rank) + file of a square gives you its index in this array
+     * Defined so that (7 - rank) + file of a square gives you its index in this array
      * Ex: b3
-     *     rank: 2 (0-indexed), file: 1  --> (8 - 2) + 1 = 7
-     * DIAGONALS_NE[7] will contain the bitboard of the diagonal that crosses through b3
+     *     rank: 2 (0-indexed), file: 1  --> (7 - 2) + 1 = 6
+     * DIAGONALS_NE[6] will contain the bitboard of the diagonal that crosses through b3
      */
     extern const Bitboard DIAGONALS_NE[];
 

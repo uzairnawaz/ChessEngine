@@ -2,6 +2,7 @@
 
 #include <string>
 #include <stdio.h>
+#include <vector>
 
 #include "Bitboard.h"
 
@@ -45,20 +46,15 @@ private:
     int fullMoveNumber;
 
     /***
-     * Generate all pseudolegal moves for the current position
-     */
-    //Move* generateAllPseudolegalMoves();
-
-    /***
      * The following functions generate all pseudo legal moves for the given piece type and store
      * the generated moves in outMoveArray.
      */
-    void generatePawnMoves(Move* outMoveArray);
-    void generateKnightMoves(Move* outMoveArray);
-    void generateBishopMoves(Move* outMoveArray);
-    //void generateRookMoves(Move* outMoveArray);
-    //void generateQueenMoves(Move* outMoveArray);
-    void generateKingMoves(Move* outMoveArray);
+    void generatePawnMoves(std::vector<Move>& outMoveArray, bool isWTurn);
+    void generateKnightMoves(std::vector<Move>& outMoveArray, bool isWTurn);
+    void generateBishopMoves(std::vector<Move>& outMoveArray, bool isWTurn);
+    void generateRookMoves(std::vector<Move>& outMoveArray, bool isWTurn);
+    void generateQueenMoves(std::vector<Move>& outMoveArray, bool isWTurn);
+    void generateKingMoves(std::vector<Move>& outMoveArray, bool isWTurn);
 
     /***
      * Return a bitboard containing all of the pieces on the board.
@@ -85,6 +81,11 @@ public:
      * Display board to console, used for debugging
      */
     void display();
+
+    /***
+     * Generate all pseudolegal moves for the current position for a given player
+     */
+    std::vector<Move>& generateAllPseudolegalMoves(bool isWTurn);
 
     /***
      * Generate all legal moves for the current position

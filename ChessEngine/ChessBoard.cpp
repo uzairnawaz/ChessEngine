@@ -130,61 +130,104 @@ Bitboard Chessboard::getAllPiecesByColor(bool isWhite) {
     return blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKings;
 }
 
-void Chessboard::generatePawnMoves(Move* moves) {
-    Bitboard pawns = isWhiteTurn ? whitePawns : blackPawns;
+std::vector<Move>& Chessboard::generateAllPseudolegalMoves(bool isWTurn) {
+    std::vector<Move>* moves = new std::vector<Move>();
+    generatePawnMoves(*moves, isWTurn);
+    generateKnightMoves(*moves, isWTurn);
+    generateKingMoves(*moves, isWTurn);
+    generateBishopMoves(*moves, isWTurn);
+    generateRookMoves(*moves, isWTurn);
+    generateQueenMoves(*moves, isWTurn);
+    return *moves;
+}
+
+void Chessboard::generatePawnMoves(std::vector<Move>& moves, bool isWTurn) {
+    Bitboard pawns = isWTurn ? whitePawns : blackPawns;
     Bitboard maskAllPieces = ~getAllPieces();
-    Bitboard enemyPieces = getAllPiecesByColor(!isWhiteTurn);
+    Bitboard enemyPieces = getAllPiecesByColor(!isWTurn);
     while (pawns) {
         Square from = Bitboards::popLSB(pawns);
-        Bitboard movesBoard = isWhiteTurn ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
+        Bitboard movesBoard = isWTurn ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
         movesBoard = movesBoard & maskAllPieces;
-        Bitboard attacksBoard = isWhiteTurn ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
+        Bitboard attacksBoard = isWTurn ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
         attacksBoard = attacksBoard & enemyPieces;
         while (movesBoard) {
             Square to = Bitboards::popLSB(movesBoard);
-            *moves++ = { from, to }; // store this move in the array and then increment the pointer
+            moves.push_back({ from, to }); 
         }
         while (attacksBoard) {
             Square to = Bitboards::popLSB(attacksBoard);
-            *moves++ = { from, to }; // store this move in the array and then increment the pointer
+            moves.push_back({ from, to });
         }
     }
 }
 
-void Chessboard::generateKnightMoves(Move* moves) {
-    Bitboard knights = isWhiteTurn ? whiteKnights : blackKnights;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWhiteTurn);
+void Chessboard::generateKnightMoves(std::vector<Move>& moves, bool isWTurn) {
+    Bitboard knights = isWTurn ? whiteKnights : blackKnights;
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
     while (knights) {
         Square from = Bitboards::popLSB(knights);
         Bitboard movesBoard = Bitboards::KNIGHT_MOVES[from] & maskFriendlyPieces;
         while (movesBoard) {
             Square to = Bitboards::popLSB(movesBoard);
-            *moves++ = { from, to }; // store this move in the array and then increment the pointer
+            moves.push_back({ from, to });
         }
     }
 }
 
-void Chessboard::generateKingMoves(Move* moves) {
-    Bitboard king = isWhiteTurn ? whiteKings : blackKings;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWhiteTurn);
+void Chessboard::generateKingMoves(std::vector<Move>& moves, bool isWTurn) {
+    Bitboard king = isWTurn ? whiteKings : blackKings;
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
     Square from = Bitboards::popLSB(king);
     Bitboard movesBoard = Bitboards::KING_MOVES[from] & maskFriendlyPieces;
     while (movesBoard) {
         Square to = Bitboards::popLSB(movesBoard);
-        *moves++ = { from, to }; // store this move in the array and then increment the pointer
+        moves.push_back({ from, to });
     }
 }
 
-void Chessboard::generateBishopMoves(Move* moves) {
-    Bitboard bishops = isWhiteTurn ? whiteBishops : blackBishops;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWhiteTurn);
+void Chessboard::generateBishopMoves(std::vector<Move>& moves, bool isWTurn) {
+    Bitboard bishops = isWTurn ? whiteBishops : blackBishops;
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+    Bitboard allPieces = getAllPieces();
     while (bishops) {
         Square from = Bitboards::popLSB(bishops);
-        Bitboards::Magic m = Bitboards::BISHOP_MAGICS[from];
-        Bitboard movesBoard = (Bitboards::BISHOP_MASKS[from] * m.magic) >> m.shift; // need to hash
+        Bitboard movesBoard = Bitboards::getBishopMoveTable(from, Bitboards::BISHOP_MASKS[from] & allPieces);
+        movesBoard &= maskFriendlyPieces;
         while (movesBoard) {
             Square to = Bitboards::popLSB(movesBoard);
-            *moves++ = { from, to }; // store this move in the array and then increment the pointer
+            moves.push_back({ from, to });
+        }
+    }
+}
+
+void Chessboard::generateRookMoves(std::vector<Move>& moves, bool isWTurn) {
+    Bitboard rooks = isWTurn ? whiteRooks : blackRooks;
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+    Bitboard allPieces = getAllPieces();
+    while (rooks) {
+        Square from = Bitboards::popLSB(rooks);
+        Bitboard movesBoard = Bitboards::getRookMoveTable(from, Bitboards::ROOK_MASKS[from] & allPieces);
+        movesBoard &= maskFriendlyPieces;
+        while (movesBoard) {
+            Square to = Bitboards::popLSB(movesBoard);
+            moves.push_back({ from, to });
+        }
+    }
+}
+
+void Chessboard::generateQueenMoves(std::vector<Move>& moves, bool isWTurn) {
+    Bitboard queens = isWTurn ? whiteQueens : blackQueens;
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+    Bitboard allPieces = getAllPieces();
+    while (queens) {
+        Square from = Bitboards::popLSB(queens);
+        Bitboard movesBoard = Bitboards::getRookMoveTable(from, Bitboards::ROOK_MASKS[from] & allPieces);
+        movesBoard |= Bitboards::getBishopMoveTable(from, Bitboards::BISHOP_MASKS[from] & allPieces);;
+        movesBoard &= maskFriendlyPieces;
+        while (movesBoard) {
+            Square to = Bitboards::popLSB(movesBoard);
+            moves.push_back({ from, to });
         }
     }
 }

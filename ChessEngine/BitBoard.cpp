@@ -6,19 +6,16 @@
 namespace Bitboards {
 
     void initPieceMoveBoards() {
-        // init move arrays for sliding pieces
-        generateMagics();
-
         Bitboard maskOuterRanks = ~(RANKS[RANK_1] | RANKS[RANK_8]);
         Bitboard maskOuterFiles = ~(FILES[FILE_A] | FILES[FILE_H]);
         for (int rank = RANK_1; rank <= RANK_8; rank++) {
             for (int file = FILE_A; file <= FILE_H; file++) {
                 Square curSquare = Squares::fromRankFile(rank, file);
 
-                ROOK_MASKS[curSquare] = (RANKS[rank] & maskOuterRanks) ^ (FILES[file] & maskOuterFiles);
+                ROOK_MASKS[curSquare] = (RANKS[rank] & maskOuterFiles) ^ (FILES[file] & maskOuterRanks);
 
                 // see header file for how diagonals were defined
-                BISHOP_MASKS[curSquare] = maskOuterRanks & maskOuterFiles & (DIAGONALS_NW[rank + file] ^ DIAGONALS_NW[(8 - rank) + file]);
+                BISHOP_MASKS[curSquare] = maskOuterRanks & maskOuterFiles & (DIAGONALS_NW[rank + file] ^ DIAGONALS_NE[(7 - rank) + file]);
 
                 Bitboard pieceBB = oneAt(curSquare);
                 // masks used to remove pieces on the edges of the board for moves that would be out of bounds
@@ -27,12 +24,12 @@ namespace Bitboards {
                 Bitboard clearFilesAB = ~(FILES[FILE_A] | FILES[FILE_B]);
                 Bitboard clearFilesGH = ~(FILES[FILE_G] | FILES[FILE_H]);
                 KNIGHT_MOVES[curSquare] =
-                    ((pieceBB & clearRanks12 & ~FILES[FILE_H]) << 17) |
-                    ((pieceBB & clearRanks12 & ~FILES[FILE_A]) << 15) |
+                    ((pieceBB & clearRanks78 & ~FILES[FILE_H]) << 17) |
+                    ((pieceBB & clearRanks78 & ~FILES[FILE_A]) << 15) |
                     ((pieceBB & ~RANKS[RANK_1] & clearFilesGH) << 10) |
                     ((pieceBB & ~RANKS[RANK_1] & clearFilesAB) <<  6) |
-                    ((pieceBB & clearRanks78 & ~FILES[FILE_A]) >> 17) |
-                    ((pieceBB & clearRanks78 & ~FILES[FILE_H]) >> 15) |
+                    ((pieceBB & clearRanks12 & ~FILES[FILE_A]) >> 17) |
+                    ((pieceBB & clearRanks12 & ~FILES[FILE_H]) >> 15) |
                     ((pieceBB & ~RANKS[RANK_8] & clearFilesAB) >> 10) |
                     ((pieceBB & ~RANKS[RANK_8] & clearFilesGH) >> 6);
 
@@ -45,11 +42,14 @@ namespace Bitboards {
                     ((pieceBB & ~FILES[FILE_H]) << 1) | ((pieceBB & ~FILES[FILE_A]) >> 1);
 
                 PAWN_MOVES_WHITE[curSquare] = (pieceBB << 8) | ((pieceBB & RANKS[RANK_2]) << 16);
-                PAWN_MOVES_BLACK[curSquare] = (pieceBB >> 8) | ((pieceBB & RANKS[RANK_2]) >> 16);
+                PAWN_MOVES_BLACK[curSquare] = (pieceBB >> 8) | ((pieceBB & RANKS[RANK_7]) >> 16);
                 PAWN_ATTACKS_WHITE[curSquare] = ((pieceBB && ~FILES[FILE_A]) << 7) | ((pieceBB && ~FILES[FILE_H]) << 9);
                 PAWN_ATTACKS_BLACK[curSquare] = ((pieceBB && ~FILES[FILE_H]) >> 7) | ((pieceBB && ~FILES[FILE_A]) >> 9);
             }
         }
+        
+        // init move arrays for sliding pieces
+        generateMagics();
     }
 
     Square popLSB(Bitboard& b) {
