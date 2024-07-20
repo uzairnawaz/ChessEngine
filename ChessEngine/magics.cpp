@@ -131,16 +131,16 @@ namespace Bitboards {
      * Returns a vector of bitboards representing the possible moves of a given piece (rook/bishop) at a starting square
      * for all possible combinations of blockers.
      */
-    std::vector<Bitboard>& generateMovesForAllBlockers(Square sq, bool isRook) {
+    std::vector<Bitboard> generateMovesForAllBlockers(Square sq, bool isRook) {
         Bitboard blockers = 0;
         Bitboard mask = isRook ? ROOK_MASKS[sq] : BISHOP_MASKS[sq];
-        std::vector<Bitboard>* movesForAllBlockers = new std::vector<Bitboard>();
+        std::vector<Bitboard> movesForAllBlockers(isRook ? MAX_ROOK_ATTACK_SETS : MAX_BISHOP_ATTACK_SETS);
         do {
-            movesForAllBlockers->push_back(isRook ? calcRookMoves(sq, blockers) : calcBishopMoves(sq, blockers));
+            movesForAllBlockers.push_back(isRook ? calcRookMoves(sq, blockers) : calcBishopMoves(sq, blockers));
             blockers = (blockers - mask) & mask;
         } while (blockers != 0);
         
-        return *movesForAllBlockers;
+        return movesForAllBlockers;
     }
 
     void generateMagics() {
@@ -172,7 +172,6 @@ namespace Bitboards {
                         foundBishopMagic = tryMakeMagicTable(sq, candidate, bishopMovesForAllBlockers, false);
                     }
                 }
-
             }
         }
     }

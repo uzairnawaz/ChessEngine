@@ -18,40 +18,40 @@ Chessboard::Chessboard(std::string fen) {
     while (fen.at(idx) != ' ') {
         switch (fen.at(idx)) {
         case 'p':
-            blackPawns |= Bitboards::oneAt(square);
+            pieces[Player::BLACK + Piece::PAWN] |= Bitboards::oneAt(square);
             break;
         case 'P':
-            whitePawns |= Bitboards::oneAt(square);
+            pieces[Player::WHITE + Piece::PAWN] |= Bitboards::oneAt(square);
             break;
         case 'n':
-            blackKnights |= Bitboards::oneAt(square);
+            pieces[Player::BLACK + Piece::KNIGHT] |= Bitboards::oneAt(square);
             break;
         case 'N':
-            whiteKnights |= Bitboards::oneAt(square);
+            pieces[Player::WHITE + Piece::KNIGHT] |= Bitboards::oneAt(square);
             break;
         case 'b':
-            blackBishops |= Bitboards::oneAt(square);
+            pieces[Player::BLACK + Piece::BISHOP] |= Bitboards::oneAt(square);
             break;
         case 'B':
-            whiteBishops |= Bitboards::oneAt(square);
+            pieces[Player::WHITE + Piece::BISHOP] |= Bitboards::oneAt(square);
             break;
         case 'r':
-            blackRooks |= Bitboards::oneAt(square);
+            pieces[Player::BLACK + Piece::ROOK] |= Bitboards::oneAt(square);
             break;
         case 'R':
-            whiteRooks |= Bitboards::oneAt(square);
+            pieces[Player::WHITE + Piece::ROOK] |= Bitboards::oneAt(square);
             break;
         case 'q':
-            blackQueens |= Bitboards::oneAt(square);
+            pieces[Player::BLACK + Piece::QUEEN] |= Bitboards::oneAt(square);
             break;
         case 'Q':
-            whiteQueens |= Bitboards::oneAt(square);
+            pieces[Player::WHITE + Piece::QUEEN] |= Bitboards::oneAt(square);
             break;
         case 'k':
-            blackKings |= Bitboards::oneAt(square);
+            pieces[Player::BLACK + Piece::KING] |= Bitboards::oneAt(square);
             break;
         case 'K':
-            whiteKings |= Bitboards::oneAt(square);
+            pieces[Player::WHITE + Piece::KING] |= Bitboards::oneAt(square);
             break;
         case '/':
             /*
@@ -78,7 +78,7 @@ Chessboard::Chessboard(std::string fen) {
 
     idx++; // skip space
     // Load current turn
-    isWhiteTurn = fen.at(idx) == 'w';
+    currentTurn = fen.at(idx) == 'w' ? Player::WHITE : Player::BLACK;
 
     idx += 2; // skip turn and space
     // Load castling ability
@@ -123,33 +123,39 @@ Chessboard::Chessboard(std::string fen) {
     fullMoveNumber = std::stoi(halfMoveClockAndNumMoves.substr(spaceIdx));
 }
 
-Bitboard Chessboard::getAllPiecesByColor(bool isWhite) {
-    if (isWhite) {
-        return whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKings;
+Bitboard Chessboard::getAllPiecesByColor(Player color) {
+    Bitboard out = 0;
+    for (int p = Piece::PAWN; p <= Piece::KING; p++) {
+        out |= pieces[color + p];
     }
-    return blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKings;
+    return out;
 }
 
-std::vector<Move>& Chessboard::generateAllPseudolegalMoves(bool isWTurn) {
-    std::vector<Move>* moves = new std::vector<Move>();
-    generatePawnMoves(*moves, isWTurn);
-    generateKnightMoves(*moves, isWTurn);
-    generateKingMoves(*moves, isWTurn);
-    generateBishopMoves(*moves, isWTurn);
-    generateRookMoves(*moves, isWTurn);
-    generateQueenMoves(*moves, isWTurn);
-    return *moves;
+std::vector<Move> Chessboard::generateAllLegalMoves(Player player) {
+    std::vector<Move> moves = generateAllPseudolegalMoves(player);
+    return moves;
 }
 
-void Chessboard::generatePawnMoves(std::vector<Move>& moves, bool isWTurn) {
-    Bitboard pawns = isWTurn ? whitePawns : blackPawns;
+std::vector<Move> Chessboard::generateAllPseudolegalMoves(Player player) {
+    std::vector<Move> moves;
+    generatePawnMoves(moves, player);
+    generateKnightMoves(moves, player);
+    generateKingMoves(moves, player);
+    generateBishopMoves(moves, player);
+    generateRookMoves(moves, player);
+    generateQueenMoves(moves, player);
+    return moves;
+}
+
+void Chessboard::generatePawnMoves(std::vector<Move>& moves, Player player) {
+    Bitboard pawns = pieces[Piece::PAWN + player];
     Bitboard maskAllPieces = ~getAllPieces();
-    Bitboard enemyPieces = getAllPiecesByColor(!isWTurn);
+    Bitboard enemyPieces = getAllPiecesByColor(Players::getEnemy(player));
     while (pawns) {
         Square from = Bitboards::popLSB(pawns);
-        Bitboard movesBoard = isWTurn ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
+        Bitboard movesBoard = player == Player::WHITE ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
         movesBoard = movesBoard & maskAllPieces;
-        Bitboard attacksBoard = isWTurn ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
+        Bitboard attacksBoard = player == Player::WHITE ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
         attacksBoard = attacksBoard & enemyPieces;
         while (movesBoard) {
             Square to = Bitboards::popLSB(movesBoard);
@@ -162,9 +168,9 @@ void Chessboard::generatePawnMoves(std::vector<Move>& moves, bool isWTurn) {
     }
 }
 
-void Chessboard::generateKnightMoves(std::vector<Move>& moves, bool isWTurn) {
-    Bitboard knights = isWTurn ? whiteKnights : blackKnights;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+void Chessboard::generateKnightMoves(std::vector<Move>& moves, Player player) {
+    Bitboard knights = pieces[Piece::KNIGHT + player];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
     while (knights) {
         Square from = Bitboards::popLSB(knights);
         Bitboard movesBoard = Bitboards::KNIGHT_MOVES[from] & maskFriendlyPieces;
@@ -175,9 +181,9 @@ void Chessboard::generateKnightMoves(std::vector<Move>& moves, bool isWTurn) {
     }
 }
 
-void Chessboard::generateKingMoves(std::vector<Move>& moves, bool isWTurn) {
-    Bitboard king = isWTurn ? whiteKings : blackKings;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+void Chessboard::generateKingMoves(std::vector<Move>& moves, Player player) {
+    Bitboard king = pieces[Piece::KING + player];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
     Square from = Bitboards::popLSB(king);
     Bitboard movesBoard = Bitboards::KING_MOVES[from] & maskFriendlyPieces;
     while (movesBoard) {
@@ -186,9 +192,9 @@ void Chessboard::generateKingMoves(std::vector<Move>& moves, bool isWTurn) {
     }
 }
 
-void Chessboard::generateBishopMoves(std::vector<Move>& moves, bool isWTurn) {
-    Bitboard bishops = isWTurn ? whiteBishops : blackBishops;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+void Chessboard::generateBishopMoves(std::vector<Move>& moves, Player player) {
+    Bitboard bishops = pieces[Piece::BISHOP + player];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
     Bitboard allPieces = getAllPieces();
     while (bishops) {
         Square from = Bitboards::popLSB(bishops);
@@ -201,9 +207,9 @@ void Chessboard::generateBishopMoves(std::vector<Move>& moves, bool isWTurn) {
     }
 }
 
-void Chessboard::generateRookMoves(std::vector<Move>& moves, bool isWTurn) {
-    Bitboard rooks = isWTurn ? whiteRooks : blackRooks;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+void Chessboard::generateRookMoves(std::vector<Move>& moves, Player player) {
+    Bitboard rooks = pieces[Piece::ROOK + player];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
     Bitboard allPieces = getAllPieces();
     while (rooks) {
         Square from = Bitboards::popLSB(rooks);
@@ -216,9 +222,9 @@ void Chessboard::generateRookMoves(std::vector<Move>& moves, bool isWTurn) {
     }
 }
 
-void Chessboard::generateQueenMoves(std::vector<Move>& moves, bool isWTurn) {
-    Bitboard queens = isWTurn ? whiteQueens : blackQueens;
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(isWTurn);
+void Chessboard::generateQueenMoves(std::vector<Move>& moves, Player player) {
+    Bitboard queens = pieces[Piece::QUEEN + player];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
     Bitboard allPieces = getAllPieces();
     while (queens) {
         Square from = Bitboards::popLSB(queens);
@@ -232,49 +238,99 @@ void Chessboard::generateQueenMoves(std::vector<Move>& moves, bool isWTurn) {
     }
 }
 
-void Chessboard::display() {
+Piece Chessboard::getPieceTypeAtSquareGivenColor(Square s, Player player) {
+    Piece piece = Piece::PAWN;
+    Bitboard bb = Bitboards::oneAt(s);
+    while (piece != Piece::NONE && (pieces[player + piece] & bb) == 0) {
+        piece = (Piece)(piece + 1);
+    }
+    return piece;
+}
+
+MoveUndoInfo Chessboard::makeMove(Move m) {
+    Bitboard fromBB = Bitboards::oneAt(m.from);
+    Bitboard toBB = Bitboards::oneAt(m.to);
+    Piece fromPiece = getPieceTypeAtSquareGivenColor(m.from, currentTurn);
+
+    // check if there is an enemy piece at destination
+    Piece toPiece = getPieceTypeAtSquareGivenColor(m.to, Players::getEnemy(currentTurn));
+
+    // perform move
+    pieces[currentTurn + fromPiece] &= ~fromBB; // remove piece from old location
+    pieces[currentTurn + fromPiece] |= toBB;    // add piece to new location
+    if (toPiece != Piece::NONE) {
+        // if this move is a capture, remove enemy piece
+        pieces[Players::getEnemy(currentTurn) + toPiece] &= ~toBB;
+    }
+
+    currentTurn = Players::getEnemy(currentTurn);
+
+    return { m, toPiece };
+}
+
+void Chessboard::undoMove(MoveUndoInfo m) {
+    currentTurn = Players::getEnemy(currentTurn);
+
+    Bitboard fromBB = Bitboards::oneAt(m.move.from);
+    Bitboard toBB = Bitboards::oneAt(m.move.to);
+
+    Piece p = getPieceTypeAtSquareGivenColor(m.move.to, currentTurn);
+
+    pieces[currentTurn + p] &= ~toBB;  // remove piece from current location
+    pieces[currentTurn + p] |= fromBB; // add piece to old location
+
+    if (m.captured != Piece::NONE) {
+        // bring captured piece back on the board
+        pieces[Players::getEnemy(currentTurn) + m.captured] |= toBB;
+    }
+}
+
+std::string Chessboard::toString() {
+    std::string out = "";
     for (int r = RANK_8; r >= RANK_1; r--) {
         for (int f = FILE_A; f <= FILE_H; f++) {
-            if (Bitboards::contains(whitePawns, Squares::fromRankFile(r, f))) {
-                printf("P");
+            if (Bitboards::contains(pieces[Player::WHITE + Piece::PAWN], Squares::fromRankFile(r, f))) {
+                out += "P";
             } 
-            else if (Bitboards::contains(blackPawns, Squares::fromRankFile(r, f))) {
-                printf("p");
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::PAWN], Squares::fromRankFile(r, f))) {
+                out += "p";
             } 
-            else if (Bitboards::contains(whiteKnights, Squares::fromRankFile(r, f))) {
-                printf("N");
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::KNIGHT], Squares::fromRankFile(r, f))) {
+                out += "N";
             }
-            else if (Bitboards::contains(blackKnights, Squares::fromRankFile(r, f))) {
-                printf("n");
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::KNIGHT], Squares::fromRankFile(r, f))) {
+                out += "n";
             }
-            else if (Bitboards::contains(whiteBishops, Squares::fromRankFile(r, f))) {
-                printf("B");
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::BISHOP], Squares::fromRankFile(r, f))) {
+                out += "B";
             }
-            else if (Bitboards::contains(blackBishops, Squares::fromRankFile(r, f))) {
-                printf("b");
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::BISHOP], Squares::fromRankFile(r, f))) {
+                out += "b";
             }
-            else if (Bitboards::contains(whiteRooks, Squares::fromRankFile(r, f))) {
-                printf("R");
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::ROOK], Squares::fromRankFile(r, f))) {
+                out += "R";
             }
-            else if (Bitboards::contains(blackRooks, Squares::fromRankFile(r, f))) {
-                printf("r");
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::ROOK], Squares::fromRankFile(r, f))) {
+                out += "r";
             }
-            else if (Bitboards::contains(whiteQueens, Squares::fromRankFile(r, f))) {
-                printf("Q");
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::QUEEN], Squares::fromRankFile(r, f))) {
+                out += "Q";
             }
-            else if (Bitboards::contains(blackQueens, Squares::fromRankFile(r, f))) {
-                printf("q");
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::QUEEN], Squares::fromRankFile(r, f))) {
+                out += "q";
             }
-            else if (Bitboards::contains(whiteKings, Squares::fromRankFile(r, f))) {
-                printf("K");
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::KING], Squares::fromRankFile(r, f))) {
+                out += "K";
             }
-            else if (Bitboards::contains(blackKings, Squares::fromRankFile(r, f))) {
-                printf("k");
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::KING], Squares::fromRankFile(r, f))) {
+                out += "k";
             }
             else {
-                printf(" ");
+                out += " ";
             }
         }
-        printf("\n");
+        out += "\n";
     }
+
+    return out;
 }

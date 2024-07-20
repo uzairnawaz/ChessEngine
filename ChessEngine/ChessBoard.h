@@ -18,28 +18,42 @@ struct CastleAbility {
     bool bQueenside = false;
 };
 
+enum Player {
+    WHITE = 0,
+    BLACK = 6
+};
+
+namespace Players {
+    inline Player getEnemy(Player p) { return (Player)(6 - p); }
+}
+
+enum Piece {
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
+    NONE
+};
+
 struct Move {
     Square from;
     Square to;
 };
 
+struct MoveUndoInfo {
+    Move move;
+    Piece captured;
+};
+
 class Chessboard
 {
 private:
-    Bitboard whitePawns = 0;
-    Bitboard whiteKnights = 0;
-    Bitboard whiteBishops = 0;
-    Bitboard whiteRooks = 0;
-    Bitboard whiteQueens = 0;
-    Bitboard whiteKings = 0;
-    Bitboard blackPawns = 0;
-    Bitboard blackKnights = 0;
-    Bitboard blackBishops = 0;
-    Bitboard blackRooks = 0;
-    Bitboard blackQueens = 0;
-    Bitboard blackKings = 0;
+    Bitboard pieces[12] = { }; // bitboards for each piece type and color (6 white piece boards, 6 black piece boards)
+                               // board index accessible by performing Piece + Player (ex pieces[PAWN + WHITE] = white pawns bitboard)
 
-    bool isWhiteTurn;
+    Player currentTurn;
     CastleAbility castleAbility;
     Square enPessantTarget;
     int halfMoveClock;
@@ -49,22 +63,28 @@ private:
      * The following functions generate all pseudo legal moves for the given piece type and store
      * the generated moves in outMoveArray.
      */
-    void generatePawnMoves(std::vector<Move>& outMoveArray, bool isWTurn);
-    void generateKnightMoves(std::vector<Move>& outMoveArray, bool isWTurn);
-    void generateBishopMoves(std::vector<Move>& outMoveArray, bool isWTurn);
-    void generateRookMoves(std::vector<Move>& outMoveArray, bool isWTurn);
-    void generateQueenMoves(std::vector<Move>& outMoveArray, bool isWTurn);
-    void generateKingMoves(std::vector<Move>& outMoveArray, bool isWTurn);
+    void generatePawnMoves(std::vector<Move>& outMoveArray, Player player);
+    void generateKnightMoves(std::vector<Move>& outMoveArray, Player player);
+    void generateBishopMoves(std::vector<Move>& outMoveArray, Player player);
+    void generateRookMoves(std::vector<Move>& outMoveArray, Player player);
+    void generateQueenMoves(std::vector<Move>& outMoveArray, Player player);
+    void generateKingMoves(std::vector<Move>& outMoveArray, Player player);
 
     /***
      * Return a bitboard containing all of the pieces on the board.
      */
-    Bitboard getAllPieces() { return getAllPiecesByColor(true) | getAllPiecesByColor(false); }
+    Bitboard getAllPieces() { return getAllPiecesByColor(Player::WHITE) | getAllPiecesByColor(Player::BLACK); }
 
     /***
      * Return a bitboard containing all of the pieces of a certain color
      */
-    Bitboard getAllPiecesByColor(bool isWhite);
+    Bitboard getAllPiecesByColor(Player color);
+
+    /***
+     * Get the type of a piece at a given square given that it is of a
+     * certain color
+     */
+    Piece getPieceTypeAtSquareGivenColor(Square s, Player player);
 
 public:
     /***
@@ -78,18 +98,29 @@ public:
     Chessboard(std::string fen);
 
     /***
-     * Display board to console, used for debugging
+     * Return a string representation of the board, used for debugging
      */
-    void display();
+    std::string toString();
 
     /***
      * Generate all pseudolegal moves for the current position for a given player
      */
-    std::vector<Move>& generateAllPseudolegalMoves(bool isWTurn);
+    std::vector<Move> generateAllPseudolegalMoves(Player player);
 
     /***
      * Generate all legal moves for the current position
      */
-    //Moves* generateAllLegalMoves();
+    std::vector<Move> generateAllLegalMoves(Player player);
+
+    /***
+     * Performs a given legal move on the board.
+     * Returns a struct containing information necessary to undo the move.
+     */
+    MoveUndoInfo makeMove(Move m);
+
+    /***
+     * Undo a move on the board, given information about the move.
+     */
+    void undoMove(MoveUndoInfo m);
 };
 
