@@ -108,11 +108,11 @@ Chessboard::Chessboard(std::string fen) {
     idx++; // skip space
     // Load en passant target square
     if (fen.at(idx) != '-') {
-        enPessantTarget = Squares::fromAlgebraic(fen.substr(idx, 2).c_str());
+        enPassantTarget = Squares::fromAlgebraic(fen.substr(idx, 2).c_str());
         idx += 3; // skip past coordinate and space
     }
     else {
-        enPessantTarget = SQ_NONE;
+        enPassantTarget = SQ_NONE;
         idx += 2; // skip past '- '
     }
 
@@ -263,9 +263,45 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
         pieces[Players::getEnemy(currentTurn) + toPiece] &= ~toBB;
     }
 
+    CastleAbility oldCastleAbility = castleAbility;
+    if (fromPiece == Piece::KING) {
+        // if we moved the king, we can no longer castle
+        if (currentTurn == Player::WHITE) {
+            castleAbility.wKingside = false;
+            castleAbility.wQueenside = false;
+        }
+        else {
+            castleAbility.bKingside = false;
+            castleAbility.bQueenside = false;
+        }
+    }
+    else if (fromPiece == Piece::ROOK) {
+        // if we moved a rook, we can no longer castle on that side
+        switch (m.from) {
+        case Square::SQ_A1:
+            castleAbility.wQueenside = false;
+            break;
+        case Square::SQ_H1:
+            castleAbility.wKingside = false;
+            break;
+        case Square::SQ_A8:
+            castleAbility.bQueenside = false;
+            break;
+        case Square::SQ_H8:
+            castleAbility.bKingside = false;
+        }
+    }
+
+    Square oldEnPassantTarget = enPassantTarget;
+    if (fromPiece == Piece::PAWN && (m.to - m.from == 16 || m.from - m.to == 16))
+    {
+        // if this move double pushed a pawn, it is now an en pessant target
+        // don't need to check direction based on player since we assume move is legal
+        enPassantTarget = m.to;
+    }
     currentTurn = Players::getEnemy(currentTurn);
 
-    return { m, toPiece };
+    return { m, toPiece, oldCastleAbility, oldEnPassantTarget };
 }
 
 void Chessboard::undoMove(MoveUndoInfo m) {
@@ -283,6 +319,9 @@ void Chessboard::undoMove(MoveUndoInfo m) {
         // bring captured piece back on the board
         pieces[Players::getEnemy(currentTurn) + m.captured] |= toBB;
     }
+
+    castleAbility = m.castleAbility;
+    enPassantTarget = m.enPassantTarget;
 }
 
 std::string Chessboard::toString() {

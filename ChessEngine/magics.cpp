@@ -134,7 +134,8 @@ namespace Bitboards {
     std::vector<Bitboard> generateMovesForAllBlockers(Square sq, bool isRook) {
         Bitboard blockers = 0;
         Bitboard mask = isRook ? ROOK_MASKS[sq] : BISHOP_MASKS[sq];
-        std::vector<Bitboard> movesForAllBlockers(isRook ? MAX_ROOK_ATTACK_SETS : MAX_BISHOP_ATTACK_SETS);
+        std::vector<Bitboard> movesForAllBlockers;
+        movesForAllBlockers.reserve(isRook ? MAX_ROOK_ATTACK_SETS : MAX_BISHOP_ATTACK_SETS);
         do {
             movesForAllBlockers.push_back(isRook ? calcRookMoves(sq, blockers) : calcBishopMoves(sq, blockers));
             blockers = (blockers - mask) & mask;
@@ -146,14 +147,16 @@ namespace Bitboards {
     void generateMagics() {
         std::mt19937_64 rng;
         std::uniform_int_distribution<Bitboard> dist;
+        std::vector<Bitboard> rookMovesForAllBlockers;
+        std::vector<Bitboard> bishopMovesForAllBlockers;
         for (int rank = RANK_1; rank <= RANK_8; rank++) {
             for (int file = FILE_A; file <= FILE_H; file++) {
                 Magic candidate;
                 bool foundRookMagic = false;
                 bool foundBishopMagic = false;
                 Square sq = Squares::fromRankFile(rank, file);
-                std::vector<Bitboard> rookMovesForAllBlockers = generateMovesForAllBlockers(sq, true);
-                std::vector<Bitboard> bishopMovesForAllBlockers = generateMovesForAllBlockers(sq, false);
+                rookMovesForAllBlockers = generateMovesForAllBlockers(sq, true);
+                bishopMovesForAllBlockers = generateMovesForAllBlockers(sq, false);
                 while (!foundRookMagic || !foundBishopMagic) {
                     // generate a random number with low # set bits
                     candidate.magic = dist(rng) & dist(rng) & dist(rng);

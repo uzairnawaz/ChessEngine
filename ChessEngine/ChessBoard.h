@@ -45,6 +45,8 @@ struct Move {
 struct MoveUndoInfo {
     Move move;
     Piece captured;
+    CastleAbility castleAbility;
+    Square enPassantTarget;
 };
 
 class Chessboard
@@ -55,7 +57,7 @@ private:
 
     Player currentTurn;
     CastleAbility castleAbility;
-    Square enPessantTarget;
+    Square enPassantTarget;
     int halfMoveClock;
     int fullMoveNumber;
 
