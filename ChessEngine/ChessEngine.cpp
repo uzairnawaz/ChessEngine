@@ -11,7 +11,7 @@ int main()
     Bitboards::initPieceMoveBoards();
     Chessboard c;
     printf("%s", c.toString().c_str());
-    c.generateAllPseudolegalMoves(Player::WHITE);
+    c.generateAllPseudolegalMoves();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

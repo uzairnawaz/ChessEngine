@@ -65,12 +65,12 @@ private:
      * The following functions generate all pseudo legal moves for the given piece type and store
      * the generated moves in outMoveArray.
      */
-    void generatePawnMoves(std::vector<Move>& outMoveArray, Player player);
-    void generateKnightMoves(std::vector<Move>& outMoveArray, Player player);
-    void generateBishopMoves(std::vector<Move>& outMoveArray, Player player);
-    void generateRookMoves(std::vector<Move>& outMoveArray, Player player);
-    void generateQueenMoves(std::vector<Move>& outMoveArray, Player player);
-    void generateKingMoves(std::vector<Move>& outMoveArray, Player player);
+    void generatePawnMoves(std::vector<Move>& outMoveArray);
+    void generateKnightMoves(std::vector<Move>& outMoveArray);
+    void generateBishopMoves(std::vector<Move>& outMoveArray);
+    void generateRookMoves(std::vector<Move>& outMoveArray);
+    void generateQueenMoves(std::vector<Move>& outMoveArray);
+    void generateKingMoves(std::vector<Move>& outMoveArray);
 
     /***
      * Return a bitboard containing all of the pieces on the board.
@@ -105,14 +105,14 @@ public:
     std::string toString();
 
     /***
-     * Generate all pseudolegal moves for the current position for a given player
+     * Generate all pseudolegal moves for the current position for the current player
      */
-    std::vector<Move> generateAllPseudolegalMoves(Player player);
+    std::vector<Move> generateAllPseudolegalMoves();
 
     /***
      * Generate all legal moves for the current position
      */
-    std::vector<Move> generateAllLegalMoves(Player player);
+    std::vector<Move> generateAllLegalMoves();
 
     /***
      * Performs a given legal move on the board.

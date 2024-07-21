@@ -43,8 +43,8 @@ namespace Bitboards {
 
                 PAWN_MOVES_WHITE[curSquare] = (pieceBB << 8) | ((pieceBB & RANKS[RANK_2]) << 16);
                 PAWN_MOVES_BLACK[curSquare] = (pieceBB >> 8) | ((pieceBB & RANKS[RANK_7]) >> 16);
-                PAWN_ATTACKS_WHITE[curSquare] = ((pieceBB && ~FILES[FILE_A]) << 7) | ((pieceBB && ~FILES[FILE_H]) << 9);
-                PAWN_ATTACKS_BLACK[curSquare] = ((pieceBB && ~FILES[FILE_H]) >> 7) | ((pieceBB && ~FILES[FILE_A]) >> 9);
+                PAWN_ATTACKS_WHITE[curSquare] = ((pieceBB & ~FILES[FILE_A]) << 7) | ((pieceBB & ~FILES[FILE_H]) << 9);
+                PAWN_ATTACKS_BLACK[curSquare] = ((pieceBB & ~FILES[FILE_H]) >> 7) | ((pieceBB & ~FILES[FILE_A]) >> 9);
             }
         }
         

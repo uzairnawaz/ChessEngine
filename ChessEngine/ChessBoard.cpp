@@ -131,31 +131,32 @@ Bitboard Chessboard::getAllPiecesByColor(Player color) {
     return out;
 }
 
-std::vector<Move> Chessboard::generateAllLegalMoves(Player player) {
-    std::vector<Move> moves = generateAllPseudolegalMoves(player);
+std::vector<Move> Chessboard::generateAllLegalMoves() {
+    std::vector<Move> moves = generateAllPseudolegalMoves();
     return moves;
 }
 
-std::vector<Move> Chessboard::generateAllPseudolegalMoves(Player player) {
+std::vector<Move> Chessboard::generateAllPseudolegalMoves() {
     std::vector<Move> moves;
-    generatePawnMoves(moves, player);
-    generateKnightMoves(moves, player);
-    generateKingMoves(moves, player);
-    generateBishopMoves(moves, player);
-    generateRookMoves(moves, player);
-    generateQueenMoves(moves, player);
+    generatePawnMoves(moves);
+    generateKnightMoves(moves);
+    generateKingMoves(moves);
+    generateBishopMoves(moves);
+    generateRookMoves(moves);
+    generateQueenMoves(moves);
     return moves;
 }
 
-void Chessboard::generatePawnMoves(std::vector<Move>& moves, Player player) {
-    Bitboard pawns = pieces[Piece::PAWN + player];
+void Chessboard::generatePawnMoves(std::vector<Move>& moves) {
+    Bitboard pawns = pieces[Piece::PAWN + currentTurn];
     Bitboard maskAllPieces = ~getAllPieces();
-    Bitboard enemyPieces = getAllPiecesByColor(Players::getEnemy(player));
+    // imagine an enemy piece is at en passant target
+    Bitboard enemyPieces = getAllPiecesByColor(Players::getEnemy(currentTurn)) | Bitboards::oneAt(enPassantTarget);
     while (pawns) {
         Square from = Bitboards::popLSB(pawns);
-        Bitboard movesBoard = player == Player::WHITE ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
+        Bitboard movesBoard = currentTurn == Player::WHITE ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
         movesBoard = movesBoard & maskAllPieces;
-        Bitboard attacksBoard = player == Player::WHITE ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
+        Bitboard attacksBoard = currentTurn == Player::WHITE ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
         attacksBoard = attacksBoard & enemyPieces;
         while (movesBoard) {
             Square to = Bitboards::popLSB(movesBoard);
@@ -168,9 +169,9 @@ void Chessboard::generatePawnMoves(std::vector<Move>& moves, Player player) {
     }
 }
 
-void Chessboard::generateKnightMoves(std::vector<Move>& moves, Player player) {
-    Bitboard knights = pieces[Piece::KNIGHT + player];
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
+void Chessboard::generateKnightMoves(std::vector<Move>& moves) {
+    Bitboard knights = pieces[Piece::KNIGHT + currentTurn];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(currentTurn);
     while (knights) {
         Square from = Bitboards::popLSB(knights);
         Bitboard movesBoard = Bitboards::KNIGHT_MOVES[from] & maskFriendlyPieces;
@@ -181,9 +182,9 @@ void Chessboard::generateKnightMoves(std::vector<Move>& moves, Player player) {
     }
 }
 
-void Chessboard::generateKingMoves(std::vector<Move>& moves, Player player) {
-    Bitboard king = pieces[Piece::KING + player];
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
+void Chessboard::generateKingMoves(std::vector<Move>& moves) {
+    Bitboard king = pieces[Piece::KING + currentTurn];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(currentTurn);
     Square from = Bitboards::popLSB(king);
     Bitboard movesBoard = Bitboards::KING_MOVES[from] & maskFriendlyPieces;
     while (movesBoard) {
@@ -192,9 +193,9 @@ void Chessboard::generateKingMoves(std::vector<Move>& moves, Player player) {
     }
 }
 
-void Chessboard::generateBishopMoves(std::vector<Move>& moves, Player player) {
-    Bitboard bishops = pieces[Piece::BISHOP + player];
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
+void Chessboard::generateBishopMoves(std::vector<Move>& moves) {
+    Bitboard bishops = pieces[Piece::BISHOP + currentTurn];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(currentTurn);
     Bitboard allPieces = getAllPieces();
     while (bishops) {
         Square from = Bitboards::popLSB(bishops);
@@ -207,9 +208,9 @@ void Chessboard::generateBishopMoves(std::vector<Move>& moves, Player player) {
     }
 }
 
-void Chessboard::generateRookMoves(std::vector<Move>& moves, Player player) {
-    Bitboard rooks = pieces[Piece::ROOK + player];
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
+void Chessboard::generateRookMoves(std::vector<Move>& moves) {
+    Bitboard rooks = pieces[Piece::ROOK + currentTurn];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(currentTurn);
     Bitboard allPieces = getAllPieces();
     while (rooks) {
         Square from = Bitboards::popLSB(rooks);
@@ -222,9 +223,9 @@ void Chessboard::generateRookMoves(std::vector<Move>& moves, Player player) {
     }
 }
 
-void Chessboard::generateQueenMoves(std::vector<Move>& moves, Player player) {
-    Bitboard queens = pieces[Piece::QUEEN + player];
-    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(player);
+void Chessboard::generateQueenMoves(std::vector<Move>& moves) {
+    Bitboard queens = pieces[Piece::QUEEN + currentTurn];
+    Bitboard maskFriendlyPieces = ~getAllPiecesByColor(currentTurn);
     Bitboard allPieces = getAllPieces();
     while (queens) {
         Square from = Bitboards::popLSB(queens);
@@ -261,6 +262,14 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
     if (toPiece != Piece::NONE) {
         // if this move is a capture, remove enemy piece
         pieces[Players::getEnemy(currentTurn) + toPiece] &= ~toBB;
+    }
+    else if (fromPiece == Piece::PAWN && m.to == enPassantTarget) {
+        // if this move is an en passant, remove enemy pawn
+        Rank r = Squares::getRank(enPassantTarget);
+        File f = Squares::getFile(enPassantTarget);
+        // enemy pawn is either 1 rank above or 1 rank below en passant target based on player color
+        Square enemyPawnToKill = Squares::fromRankFile(currentTurn == Player::WHITE ? r - 1 : r + 1, f);
+        pieces[Players::getEnemy(currentTurn) + Piece::PAWN] &= ~Bitboards::oneAt(enemyPawnToKill);
     }
 
     CastleAbility oldCastleAbility = castleAbility;
