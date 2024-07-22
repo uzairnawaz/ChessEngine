@@ -61,7 +61,7 @@ namespace Bitboards {
      * Create a bitboard that contains a single 1 at the specified coordinate.
      * The rest of the board is filled with 0s.
      */
-    inline Bitboard oneAt(Square s) { return ((Bitboard)1) << s; };
+    inline Bitboard oneAt(Square s) { return s == Square::SQUARE_NONE ? 0 : ((Bitboard)1) << s; };
 
     /***
      * Check if a piece is present at the given x and y coordinates.

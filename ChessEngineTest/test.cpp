@@ -148,6 +148,10 @@ TEST(MoveGeneration, PawnPromotion) {
     EXPECT_EQ(c.generateAllLegalMoves().size(), 9);
 }
 
+/***
+ * PERFT TESTS:
+ * Data sourced from: https://www.chessprogramming.org/Perft_Results 
+ */
 TEST(PERFT, StartingPosition) {
     Chessboard c = Chessboard();
     EXPECT_EQ(c.perft(1), 20);
@@ -174,6 +178,31 @@ TEST(PERFT, Pos3) {
     EXPECT_EQ(c.perft(4), 43238);
     EXPECT_EQ(c.perft(5), 674624);
     //EXPECT_EQ(c.perft(6), 11030083);
+}
+
+TEST(PERFT, Pos4) {
+    Chessboard c = Chessboard("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
+    EXPECT_EQ(c.perft(1), 6);
+    EXPECT_EQ(c.perft(2), 264);
+    EXPECT_EQ(c.perft(3), 9467);
+    EXPECT_EQ(c.perft(4), 422333);
+    //EXPECT_EQ(c.perft(5), 15833292);
+}
+
+TEST(PERFT, Pos5) {
+    Chessboard c = Chessboard("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    EXPECT_EQ(c.perft(1), 44);
+    EXPECT_EQ(c.perft(2), 1486);
+    EXPECT_EQ(c.perft(3), 62379);
+    EXPECT_EQ(c.perft(4), 2103487);
+}
+
+TEST(PERFT, Pos6) {
+    Chessboard c = Chessboard("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
+    EXPECT_EQ(c.perft(1), 46);
+    EXPECT_EQ(c.perft(2), 2079);
+    EXPECT_EQ(c.perft(3), 89890);
+    EXPECT_EQ(c.perft(4), 3894594);
 }
 
 TEST(MoveExecution, UndoMoveNoCapture) {

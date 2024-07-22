@@ -9,8 +9,11 @@ int main()
 {
 
     Bitboards::initPieceMoveBoards();
-    Chessboard c = Chessboard();
-    printf("%d", c.perft(5));
+    Chessboard c = Chessboard("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
+    c.makeMove({ C4, C5 });
+    c.makeMove({ E8, C8 });
+    c.makeMove({ A1, B1 });
+    printf("%d\n", c.verbosePerft(1));
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
