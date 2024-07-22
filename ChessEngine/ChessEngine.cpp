@@ -9,9 +9,8 @@ int main()
 {
 
     Bitboards::initPieceMoveBoards();
-    Chessboard c;
-    printf("%s", c.toString().c_str());
-    c.generateAllPseudolegalMoves();
+    Chessboard c = Chessboard();
+    printf("%d", c.perft(5));
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

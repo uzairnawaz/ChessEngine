@@ -14,7 +14,7 @@ Chessboard::Chessboard(std::string fen) {
 
      // load board position into bitboards
     int idx = 0;
-    Square square = SQ_A8;
+    Square square = A8;
     while (fen.at(idx) != ' ') {
         switch (fen.at(idx)) {
         case 'p':
@@ -112,7 +112,7 @@ Chessboard::Chessboard(std::string fen) {
         idx += 3; // skip past coordinate and space
     }
     else {
-        enPassantTarget = SQ_NONE;
+        enPassantTarget = Square::SQUARE_NONE;
         idx += 2; // skip past '- '
     }
 
@@ -132,8 +132,17 @@ Bitboard Chessboard::getAllPiecesByColor(Player color) {
 }
 
 std::vector<Move> Chessboard::generateAllLegalMoves() {
-    std::vector<Move> moves = generateAllPseudolegalMoves();
-    return moves;
+    std::vector<Move> psuedolegalMoves = generateAllPseudolegalMoves();
+    std::vector<Move> legalMoves;
+    for (Move& m : psuedolegalMoves) {
+        MoveUndoInfo moveInfo = makeMove(m);
+        if (!isChecked(Players::getEnemy(currentTurn))) {
+            // if our move didn't result in the next player being able to attack the king, the move is legal
+            legalMoves.push_back(m);
+        }
+        undoMove(moveInfo);
+    }
+    return legalMoves;
 }
 
 std::vector<Move> Chessboard::generateAllPseudolegalMoves() {
@@ -147,24 +156,79 @@ std::vector<Move> Chessboard::generateAllPseudolegalMoves() {
     return moves;
 }
 
+bool Chessboard::isAttacking(Player player, Square sq) {
+    Bitboard allPieces = getAllPieces();
+    // check pawn attacks
+    Bitboard* pawnAttacks = player == Player::WHITE ? Bitboards::PAWN_ATTACKS_BLACK : Bitboards::PAWN_ATTACKS_WHITE;
+    if (pawnAttacks[sq] & pieces[player + Piece::PAWN]) {
+        return true;
+    }
+    if (Bitboards::KNIGHT_MOVES[sq] & pieces[player + Piece::KNIGHT]) {
+        return true;
+    }
+    if (Bitboards::getBishopMoveTable(sq, Bitboards::BISHOP_MASKS[sq] & allPieces) & 
+        (pieces[player + Piece::BISHOP] | pieces[player + Piece::QUEEN])) {
+        return true;
+    }
+    if (Bitboards::getRookMoveTable(sq, Bitboards::ROOK_MASKS[sq] & allPieces) &
+        (pieces[player + Piece::ROOK] | pieces[player + Piece::QUEEN])) {
+        return true;
+    }
+    if (Bitboards::KING_MOVES[sq] & pieces[player + Piece::KING]) {
+        return true;
+    }
+    return false;
+}
+
+bool Chessboard::isChecked(Player p) {
+    unsigned long kingLoc;
+    _BitScanForward64(&kingLoc, pieces[p + Piece::KING]);
+    return isAttacking(Players::getEnemy(p), (Square)kingLoc);
+}
+
 void Chessboard::generatePawnMoves(std::vector<Move>& moves) {
     Bitboard pawns = pieces[Piece::PAWN + currentTurn];
-    Bitboard maskAllPieces = ~getAllPieces();
+    Bitboard allPieces = getAllPieces();
     // imagine an enemy piece is at en passant target
     Bitboard enemyPieces = getAllPiecesByColor(Players::getEnemy(currentTurn)) | Bitboards::oneAt(enPassantTarget);
+    Rank promoteRank = currentTurn == Player::WHITE ? RANK_8 : RANK_1;
+    Rank startingRank = currentTurn == Player::WHITE ? RANK_2 : RANK_7;
     while (pawns) {
         Square from = Bitboards::popLSB(pawns);
         Bitboard movesBoard = currentTurn == Player::WHITE ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
-        movesBoard = movesBoard & maskAllPieces;
+        movesBoard = movesBoard & ~allPieces;
         Bitboard attacksBoard = currentTurn == Player::WHITE ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
         attacksBoard = attacksBoard & enemyPieces;
         while (movesBoard) {
             Square to = Bitboards::popLSB(movesBoard);
-            moves.push_back({ from, to }); 
+            if (Squares::getRank(to) == promoteRank) {
+                moves.push_back({ from, to, Piece::KNIGHT });
+                moves.push_back({ from, to, Piece::BISHOP });
+                moves.push_back({ from, to, Piece::ROOK });
+                moves.push_back({ from, to, Piece::QUEEN });
+            }
+            else {
+                moves.push_back({ from, to });
+            }
+
+            // double push
+            Square doublePushSquare = (Square)(currentTurn == Player::WHITE ? to + 8 : to - 8);
+            Bitboard doublePush = Bitboards::oneAt(doublePushSquare);
+            if (Squares::getRank(from) == startingRank && (doublePush & allPieces) == 0) {
+                moves.push_back({ from, doublePushSquare });
+            }
         }
         while (attacksBoard) {
             Square to = Bitboards::popLSB(attacksBoard);
-            moves.push_back({ from, to });
+            if (Squares::getRank(to) == promoteRank) {
+                moves.push_back({ from, to, Piece::KNIGHT });
+                moves.push_back({ from, to, Piece::BISHOP });
+                moves.push_back({ from, to, Piece::ROOK });
+                moves.push_back({ from, to, Piece::QUEEN });
+            }
+            else {
+                moves.push_back({ from, to });
+            }
         }
     }
 }
@@ -185,12 +249,42 @@ void Chessboard::generateKnightMoves(std::vector<Move>& moves) {
 void Chessboard::generateKingMoves(std::vector<Move>& moves) {
     Bitboard king = pieces[Piece::KING + currentTurn];
     Bitboard maskFriendlyPieces = ~getAllPiecesByColor(currentTurn);
+    Bitboard allPieces = getAllPieces();
     Square from = Bitboards::popLSB(king);
     Bitboard movesBoard = Bitboards::KING_MOVES[from] & maskFriendlyPieces;
+    
+   
+    Bitboard kingSideMask = currentTurn == Player::WHITE ? Bitboards::WHITE_KINGSIDE : Bitboards::BLACK_KINGSIDE;
+    Bitboard queenSideMask = currentTurn == Player::WHITE ? Bitboards::WHITE_QUEENSIDE : Bitboards::BLACK_QUEENSIDE;
+
     while (movesBoard) {
         Square to = Bitboards::popLSB(movesBoard);
         moves.push_back({ from, to });
     }
+
+    if (!isChecked(currentTurn)) {
+        if (currentTurn == Player::WHITE) {
+            if (castleAbility.wKingside && (allPieces & Bitboards::WHITE_KINGSIDE) == 0 && 
+                !isAttacking(Player::BLACK, Square::F1) && !isAttacking(Player::BLACK, Square::G1)) {
+                moves.push_back({ E1, G1 });
+            }
+            if (castleAbility.wQueenside && (allPieces & Bitboards::WHITE_QUEENSIDE) == 0 &&
+                !isAttacking(Player::BLACK, Square::D1) && !isAttacking(Player::BLACK, Square::C1)) {
+                moves.push_back({ E1, C1 });
+            }
+        }
+        else {
+            if (castleAbility.bKingside && (allPieces & Bitboards::BLACK_KINGSIDE) == 0 &&
+                !isAttacking(Player::WHITE, Square::F8) && !isAttacking(Player::WHITE, Square::G8)) {
+                moves.push_back({ E8, G8 });
+            }
+            if (castleAbility.bQueenside && (allPieces & Bitboards::BLACK_QUEENSIDE) == 0 &&
+                !isAttacking(Player::WHITE, Square::D8) && !isAttacking(Player::WHITE, Square::C8)) {
+                moves.push_back({ E8, C8 });
+            }
+        }
+    }
+    
 }
 
 void Chessboard::generateBishopMoves(std::vector<Move>& moves) {
@@ -242,7 +336,7 @@ void Chessboard::generateQueenMoves(std::vector<Move>& moves) {
 Piece Chessboard::getPieceTypeAtSquareGivenColor(Square s, Player player) {
     Piece piece = Piece::PAWN;
     Bitboard bb = Bitboards::oneAt(s);
-    while (piece != Piece::NONE && (pieces[player + piece] & bb) == 0) {
+    while (piece != Piece::PIECE_NONE && (pieces[player + piece] & bb) == 0) {
         piece = (Piece)(piece + 1);
     }
     return piece;
@@ -252,16 +346,40 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
     Bitboard fromBB = Bitboards::oneAt(m.from);
     Bitboard toBB = Bitboards::oneAt(m.to);
     Piece fromPiece = getPieceTypeAtSquareGivenColor(m.from, currentTurn);
+    CastleAbility oldCastleAbility = castleAbility;
 
     // check if there is an enemy piece at destination
     Piece toPiece = getPieceTypeAtSquareGivenColor(m.to, Players::getEnemy(currentTurn));
 
     // perform move
     pieces[currentTurn + fromPiece] &= ~fromBB; // remove piece from old location
-    pieces[currentTurn + fromPiece] |= toBB;    // add piece to new location
-    if (toPiece != Piece::NONE) {
+    if (m.promotion == Piece::PIECE_NONE) {
+        pieces[currentTurn + fromPiece] |= toBB;    // add piece to new location
+    }
+    else {
+        pieces[currentTurn + m.promotion] |= toBB;  // promote pawn
+    }
+
+    if (toPiece != Piece::PIECE_NONE) {
         // if this move is a capture, remove enemy piece
         pieces[Players::getEnemy(currentTurn) + toPiece] &= ~toBB;
+
+        // if rook captured, can't castle on that side
+        if (toPiece == Piece::ROOK) {
+            switch (m.to) {
+            case Square::A1:
+                castleAbility.wQueenside = false;
+                break;
+            case Square::H1:
+                castleAbility.wKingside = false;
+                break;
+            case Square::A8:
+                castleAbility.bQueenside = false;
+                break;
+            case Square::H8:
+                castleAbility.bKingside = false;
+            }
+        }
     }
     else if (fromPiece == Piece::PAWN && m.to == enPassantTarget) {
         // if this move is an en passant, remove enemy pawn
@@ -272,7 +390,6 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
         pieces[Players::getEnemy(currentTurn) + Piece::PAWN] &= ~Bitboards::oneAt(enemyPawnToKill);
     }
 
-    CastleAbility oldCastleAbility = castleAbility;
     if (fromPiece == Piece::KING) {
         // if we moved the king, we can no longer castle
         if (currentTurn == Player::WHITE) {
@@ -283,20 +400,39 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
             castleAbility.bKingside = false;
             castleAbility.bQueenside = false;
         }
+
+        if (Squares::getFile(m.from) == File::FILE_E) {
+            // if castling kingside
+            if (Squares::getFile(m.to) == File::FILE_G) {
+                // move kingside rook. can assume it is at H file because we assume castling is a valid move
+                Bitboard kingsideRook = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::H1 : Square::H8);
+                Bitboard newRookLoc = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::F1 : Square::F8);
+                pieces[currentTurn + Piece::ROOK] &= ~kingsideRook;
+                pieces[currentTurn + Piece::ROOK] |= newRookLoc;
+            }
+            // if castling queenside
+            if (Squares::getFile(m.to) == File::FILE_C) {
+                // move queenside rook. can assume it is at A file because we assume castling is a valid move
+                Bitboard queensideRook = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::A1 : Square::A8);
+                Bitboard newRookLoc = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::D1 : Square::D8);
+                pieces[currentTurn + Piece::ROOK] &= ~queensideRook;
+                pieces[currentTurn + Piece::ROOK] |= newRookLoc;
+            }
+        }
     }
     else if (fromPiece == Piece::ROOK) {
         // if we moved a rook, we can no longer castle on that side
         switch (m.from) {
-        case Square::SQ_A1:
+        case Square::A1:
             castleAbility.wQueenside = false;
             break;
-        case Square::SQ_H1:
+        case Square::H1:
             castleAbility.wKingside = false;
             break;
-        case Square::SQ_A8:
+        case Square::A8:
             castleAbility.bQueenside = false;
             break;
-        case Square::SQ_H8:
+        case Square::H8:
             castleAbility.bKingside = false;
         }
     }
@@ -304,9 +440,11 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
     Square oldEnPassantTarget = enPassantTarget;
     if (fromPiece == Piece::PAWN && (m.to - m.from == 16 || m.from - m.to == 16))
     {
-        // if this move double pushed a pawn, it is now an en pessant target
-        // don't need to check direction based on player since we assume move is legal
-        enPassantTarget = m.to;
+        // if this move double pushed a pawn, it is now an en passant target
+        enPassantTarget = (Square)(currentTurn == Player::WHITE ? m.from + 8 : m.from - 8);
+    }
+    else {
+        enPassantTarget = Square::SQUARE_NONE;
     }
     currentTurn = Players::getEnemy(currentTurn);
 
@@ -322,15 +460,82 @@ void Chessboard::undoMove(MoveUndoInfo m) {
     Piece p = getPieceTypeAtSquareGivenColor(m.move.to, currentTurn);
 
     pieces[currentTurn + p] &= ~toBB;  // remove piece from current location
-    pieces[currentTurn + p] |= fromBB; // add piece to old location
+    if (m.move.promotion == Piece::PIECE_NONE) {
+        pieces[currentTurn + p] |= fromBB; // add piece to old location
+    }
+    else {
+        pieces[currentTurn + Piece::PAWN] |= fromBB; // demote back to pawn
+    }
 
-    if (m.captured != Piece::NONE) {
+    if (p == Piece::PAWN && m.move.to == m.enPassantTarget) {
+        // bring back captured pawn from en passant
+        Rank r = Squares::getRank(m.enPassantTarget);
+        File f = Squares::getFile(m.enPassantTarget);
+        Square enemyPawnLoc = Squares::fromRankFile(currentTurn == Player::WHITE ? r - 1 : r + 1, f);
+        pieces[Players::getEnemy(currentTurn) + Piece::PAWN] |= Bitboards::oneAt(enemyPawnLoc);
+    }
+    else if (m.captured != Piece::PIECE_NONE) {
         // bring captured piece back on the board
         pieces[Players::getEnemy(currentTurn) + m.captured] |= toBB;
     }
 
+    if (p == Piece::KING) {
+        if (Squares::getFile(m.move.from) == File::FILE_E) {
+            if (Squares::getFile(m.move.to) == File::FILE_G) {
+                // undo kingside castle
+                Bitboard originalLoc = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::H1 : Square::H8);
+                Bitboard curLoc = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::F1 : Square::F8);
+                pieces[currentTurn + Piece::ROOK] &= ~curLoc;
+                pieces[currentTurn + Piece::ROOK] |= originalLoc;
+            }
+            if (Squares::getFile(m.move.to) == File::FILE_C) {
+                // undo queenside castle
+                Bitboard originalLoc = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::A1 : Square::A8);
+                Bitboard curLoc = Bitboards::oneAt(currentTurn == Player::WHITE ? Square::D1 : Square::D8);
+                pieces[currentTurn + Piece::ROOK] &= ~curLoc;
+                pieces[currentTurn + Piece::ROOK] |= originalLoc;
+            }
+        }
+    }
+
     castleAbility = m.castleAbility;
     enPassantTarget = m.enPassantTarget;
+}
+
+unsigned long Chessboard::perft(int depth) {
+    unsigned long numMoves = 0;
+    std::vector<Move> moves = generateAllLegalMoves();
+    if (depth == 0) {
+        return 1;
+    }
+    if (depth == 1) {
+        return moves.size();
+    }
+    for (Move& m : moves) {
+        MoveUndoInfo moveInfo = makeMove(m);
+        numMoves += perft(depth - 1);
+        undoMove(moveInfo);
+    }
+
+    return numMoves;
+}
+
+unsigned long Chessboard::verbosePerft(int depth) {
+    unsigned long numMoves = 0;
+    std::vector<Move> moves = generateAllLegalMoves();
+    if (depth == 0) {
+        return 1;
+    }
+    for (Move& m : moves) {
+        MoveUndoInfo moveInfo = makeMove(m);
+        unsigned long newMoves = perft(depth - 1);
+        numMoves += newMoves;
+        printf("%s%s: %d\n", Squares::toAlgebraic(m.from).c_str(),
+            Squares::toAlgebraic(m.to).c_str(), newMoves);
+        undoMove(moveInfo);
+    }
+
+    return numMoves;
 }
 
 std::string Chessboard::toString() {

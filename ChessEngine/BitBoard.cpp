@@ -26,23 +26,23 @@ namespace Bitboards {
                 KNIGHT_MOVES[curSquare] =
                     ((pieceBB & clearRanks78 & ~FILES[FILE_H]) << 17) |
                     ((pieceBB & clearRanks78 & ~FILES[FILE_A]) << 15) |
-                    ((pieceBB & ~RANKS[RANK_1] & clearFilesGH) << 10) |
-                    ((pieceBB & ~RANKS[RANK_1] & clearFilesAB) <<  6) |
+                    ((pieceBB & ~RANKS[RANK_8] & clearFilesGH) << 10) |
+                    ((pieceBB & ~RANKS[RANK_8] & clearFilesAB) <<  6) |
                     ((pieceBB & clearRanks12 & ~FILES[FILE_A]) >> 17) |
                     ((pieceBB & clearRanks12 & ~FILES[FILE_H]) >> 15) |
-                    ((pieceBB & ~RANKS[RANK_8] & clearFilesAB) >> 10) |
-                    ((pieceBB & ~RANKS[RANK_8] & clearFilesGH) >> 6);
+                    ((pieceBB & ~RANKS[RANK_1] & clearFilesAB) >> 10) |
+                    ((pieceBB & ~RANKS[RANK_1] & clearFilesGH) >> 6);
 
                 KING_MOVES[curSquare] =
-                    ((pieceBB & ~RANKS[RANK_1] & ~FILES[FILE_H]) << 9) |
-                    ((pieceBB & ~RANKS[RANK_1] & ~FILES[FILE_A]) << 7) |
-                    ((pieceBB & ~RANKS[RANK_8] & ~FILES[FILE_A]) >> 9) |
-                    ((pieceBB & ~RANKS[RANK_8] & ~FILES[FILE_H]) >> 7) |
-                    ((pieceBB & ~RANKS[RANK_1]) << 8) | ((pieceBB & ~RANKS[RANK_8]) >> 8) |
+                    ((pieceBB & ~RANKS[RANK_8] & ~FILES[FILE_H]) << 9) |
+                    ((pieceBB & ~RANKS[RANK_8] & ~FILES[FILE_A]) << 7) |
+                    ((pieceBB & ~RANKS[RANK_1] & ~FILES[FILE_A]) >> 9) |
+                    ((pieceBB & ~RANKS[RANK_1] & ~FILES[FILE_H]) >> 7) |
+                    ((pieceBB & ~RANKS[RANK_8]) << 8) | ((pieceBB & ~RANKS[RANK_1]) >> 8) |
                     ((pieceBB & ~FILES[FILE_H]) << 1) | ((pieceBB & ~FILES[FILE_A]) >> 1);
 
-                PAWN_MOVES_WHITE[curSquare] = (pieceBB << 8) | ((pieceBB & RANKS[RANK_2]) << 16);
-                PAWN_MOVES_BLACK[curSquare] = (pieceBB >> 8) | ((pieceBB & RANKS[RANK_7]) >> 16);
+                PAWN_MOVES_WHITE[curSquare] = (pieceBB << 8);
+                PAWN_MOVES_BLACK[curSquare] = (pieceBB >> 8);
                 PAWN_ATTACKS_WHITE[curSquare] = ((pieceBB & ~FILES[FILE_A]) << 7) | ((pieceBB & ~FILES[FILE_H]) << 9);
                 PAWN_ATTACKS_BLACK[curSquare] = ((pieceBB & ~FILES[FILE_H]) >> 7) | ((pieceBB & ~FILES[FILE_A]) >> 9);
             }
@@ -116,6 +116,11 @@ namespace Bitboards {
         0x0000000000008040,
         0x0000000000000080
     };
+
+    const Bitboard WHITE_KINGSIDE  = 0x0000000000000060;
+    const Bitboard WHITE_QUEENSIDE = 0x000000000000000e;
+    const Bitboard BLACK_KINGSIDE  = 0x6000000000000000;
+    const Bitboard BLACK_QUEENSIDE = 0x0e00000000000000;
 
     Bitboard ROOK_MASKS[NUM_SQUARES];
     Bitboard BISHOP_MASKS[NUM_SQUARES];

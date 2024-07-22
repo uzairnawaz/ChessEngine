@@ -34,12 +34,13 @@ enum Piece {
     ROOK,
     QUEEN,
     KING,
-    NONE
+    PIECE_NONE
 };
 
 struct Move {
     Square from;
     Square to;
+    Piece promotion = Piece::PIECE_NONE;
 };
 
 struct MoveUndoInfo {
@@ -88,6 +89,16 @@ private:
      */
     Piece getPieceTypeAtSquareGivenColor(Square s, Player player);
 
+    /***
+     * Return true if a given player is attacking a specified square.
+     */
+    bool isAttacking(Player player, Square sq);
+
+    /***
+     * Return true if a given player is under check
+     */
+    bool isChecked(Player p);
+
 public:
     /***
      * Initialize a chess board with the normal starting position
@@ -124,5 +135,12 @@ public:
      * Undo a move on the board, given information about the move.
      */
     void undoMove(MoveUndoInfo m);
+
+    /***
+     * Counts the number of legal moves at a certain depth.
+     * Used for debugging purposes.
+     */
+    unsigned long perft(int depth);
+    unsigned long verbosePerft(int depth);
 };
 
