@@ -154,11 +154,14 @@ TEST(MoveGeneration, PawnPromotion) {
  */
 TEST(PERFT, StartingPosition) {
     Chessboard c = Chessboard();
+    
     EXPECT_EQ(c.perft(1), 20);
     EXPECT_EQ(c.perft(2), 400);
     EXPECT_EQ(c.perft(3), 8902);
     EXPECT_EQ(c.perft(4), 197281);
     EXPECT_EQ(c.perft(5), 4865609);
+    
+    //c.perft(6);
 }
 
 TEST(PERFT, Kiwipete) {
@@ -222,4 +225,12 @@ TEST(MoveExecution, UndoMoveCapture) {
     EXPECT_EQ(c.toString(), Chessboard("r1bqkbnr/ppp1pppp/8/3p4/3n4/4PN2/PPP2PPP/RNBQKB1R w KQkq - 0 1").toString());
     c.undoMove(m1);
     EXPECT_EQ(c.toString(), Chessboard("r1bqkbnr/ppp1pppp/2n5/3p4/3P4/4PN2/PPP2PPP/RNBQKB1R b KQkq - 0 1").toString());
+}
+
+TEST(MoveExecution, UndoPromotion) {
+    Chessboard c = Chessboard("2k5/5P2/8/8/8/8/8/2K5 w - - 0 1");
+    MoveUndoInfo m = c.makeMove({ F7, F8, Piece::QUEEN });
+    EXPECT_EQ(c.toString(), Chessboard("2k2Q2/8/8/8/8/8/8/2K5 w - - 0 1").toString());
+    c.undoMove(m);
+    EXPECT_EQ(c.toString(), Chessboard("2k5/5P2/8/8/8/8/8/2K5 w - - 0 1").toString());
 }

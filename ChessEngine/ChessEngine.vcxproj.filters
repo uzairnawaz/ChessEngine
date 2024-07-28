@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ChessEngine.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Bitboard.cpp">
@@ -27,12 +27,18 @@
     <ClCompile Include="magics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ChessEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitboard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Chessboard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChessEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

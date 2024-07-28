@@ -95,6 +95,10 @@ namespace Bitboards {
      */
     Bitboard getBishopMoveTable(Square sq, Bitboard blockers);
 
+
+    // boolean storing whether bitboards have been initialized yet
+    extern bool bitboardsInitialized;
+
     extern const Bitboard RANKS[];
     extern const Bitboard FILES[];
 
@@ -129,9 +133,7 @@ namespace Bitboards {
     extern Bitboard KNIGHT_MOVES[NUM_SQUARES];
     extern Bitboard KING_MOVES[NUM_SQUARES];
 
-    extern Bitboard PAWN_MOVES_WHITE[NUM_SQUARES];
     extern Bitboard PAWN_ATTACKS_WHITE[NUM_SQUARES];
-    extern Bitboard PAWN_MOVES_BLACK[NUM_SQUARES];
     extern Bitboard PAWN_ATTACKS_BLACK[NUM_SQUARES];
 
     struct Magic {

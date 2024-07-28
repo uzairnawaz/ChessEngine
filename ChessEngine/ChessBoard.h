@@ -41,13 +41,19 @@ struct Move {
     Square from;
     Square to;
     Piece promotion = Piece::PIECE_NONE;
+    bool isCapture = false;
 };
+
+namespace Moves {
+    std::string toString(Move& m);
+}
 
 struct MoveUndoInfo {
     Move move;
     Piece captured;
     CastleAbility castleAbility;
     Square enPassantTarget;
+    int halfMoveClock;
 };
 
 class Chessboard
@@ -94,11 +100,6 @@ private:
      */
     bool isAttacking(Player player, Square sq);
 
-    /***
-     * Return true if a given player is under check
-     */
-    bool isChecked(Player p);
-
 public:
     /***
      * Initialize a chess board with the normal starting position
@@ -111,9 +112,28 @@ public:
     Chessboard(std::string fen);
 
     /***
+     * Returns the current player
+     */
+    Player getTurn();
+
+    /***
      * Return a string representation of the board, used for debugging
      */
     std::string toString();
+
+    /***
+     * Return a FEN string representation of the board, used for debugging
+     */
+    std::string toFEN();
+
+    /***
+     * Count the number of pieces of a certain type and color
+     */
+    int countPieces(Player player, Piece piece);
+
+    /***
+     * 
+     */
 
     /***
      * Generate all pseudolegal moves for the current position for the current player
@@ -137,10 +157,16 @@ public:
     void undoMove(MoveUndoInfo m);
 
     /***
+     * Return true if a given player is under check
+     */
+    bool isChecked(Player p);
+
+    /***
      * Counts the number of legal moves at a certain depth.
      * Used for debugging purposes.
      */
     unsigned long perft(int depth);
     unsigned long verbosePerft(int depth);
+    unsigned long psuedolegalPerft(int depth);
 };
 

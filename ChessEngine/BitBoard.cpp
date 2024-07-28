@@ -6,6 +6,10 @@
 namespace Bitboards {
 
     void initPieceMoveBoards() {
+        if (bitboardsInitialized) {
+            return;
+        }
+        bitboardsInitialized = true;
         Bitboard maskOuterRanks = ~(RANKS[RANK_1] | RANKS[RANK_8]);
         Bitboard maskOuterFiles = ~(FILES[FILE_A] | FILES[FILE_H]);
         for (int rank = RANK_1; rank <= RANK_8; rank++) {
@@ -41,8 +45,6 @@ namespace Bitboards {
                     ((pieceBB & ~RANKS[RANK_8]) << 8) | ((pieceBB & ~RANKS[RANK_1]) >> 8) |
                     ((pieceBB & ~FILES[FILE_H]) << 1) | ((pieceBB & ~FILES[FILE_A]) >> 1);
 
-                PAWN_MOVES_WHITE[curSquare] = (pieceBB << 8);
-                PAWN_MOVES_BLACK[curSquare] = (pieceBB >> 8);
                 PAWN_ATTACKS_WHITE[curSquare] = ((pieceBB & ~FILES[FILE_A]) << 7) | ((pieceBB & ~FILES[FILE_H]) << 9);
                 PAWN_ATTACKS_BLACK[curSquare] = ((pieceBB & ~FILES[FILE_H]) >> 7) | ((pieceBB & ~FILES[FILE_A]) >> 9);
             }
@@ -58,6 +60,8 @@ namespace Bitboards {
         b &= b - 1; // b - 1 will cause the LSB of b to become 0 and will alter only the lower order bits (which are set to 0 in b)
         return (Square)index;
     }
+
+    bool bitboardsInitialized = false;
 
     const Bitboard RANKS[] = {
         0x00000000000000ff,
@@ -127,9 +131,7 @@ namespace Bitboards {
     Bitboard KNIGHT_MOVES[NUM_SQUARES];
     Bitboard KING_MOVES[NUM_SQUARES];
 
-    Bitboard PAWN_MOVES_WHITE[NUM_SQUARES];
     Bitboard PAWN_ATTACKS_WHITE[NUM_SQUARES];
-    Bitboard PAWN_MOVES_BLACK[NUM_SQUARES];
     Bitboard PAWN_ATTACKS_BLACK[NUM_SQUARES];
 
     Magic ROOK_MAGICS[NUM_SQUARES];

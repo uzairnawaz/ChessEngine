@@ -1,4 +1,18 @@
+
+#include <sstream>
+
 #include "Chessboard.h"
+
+namespace Moves {
+    std::string toString(Move& m) {
+        std::string out = Squares::toAlgebraic(m.from) + Squares::toAlgebraic(m.to);
+        if (m.promotion != Piece::PIECE_NONE) {
+            char pieceNames[] = { 'p', 'n', 'b', 'r', 'q' };
+            out += pieceNames[m.promotion];
+        }
+        return out;
+    }
+}
 
 Chessboard::Chessboard(std::string fen) {
     /***
@@ -123,6 +137,14 @@ Chessboard::Chessboard(std::string fen) {
     fullMoveNumber = std::stoi(halfMoveClockAndNumMoves.substr(spaceIdx));
 }
 
+Player Chessboard::getTurn() {
+    return currentTurn;
+}
+
+int Chessboard::countPieces(Player player, Piece piece) {
+    return __popcnt64(pieces[player + piece]);
+}
+
 Bitboard Chessboard::getAllPiecesByColor(Player color) {
     Bitboard out = 0;
     for (int p = Piece::PAWN; p <= Piece::KING; p++) {
@@ -147,12 +169,30 @@ std::vector<Move> Chessboard::generateAllLegalMoves() {
 
 std::vector<Move> Chessboard::generateAllPseudolegalMoves() {
     std::vector<Move> moves;
-    generatePawnMoves(moves);
+
     generateKnightMoves(moves);
     generateKingMoves(moves);
     generateBishopMoves(moves);
     generateRookMoves(moves);
     generateQueenMoves(moves);
+
+    /* After generating all moves, update isCapture property.
+       This could've been done within each generate method,
+       but would cause duplicate code. 
+       
+       Note: it is very easy to tell if a pawn move is a capture, 
+             so generatePawnMoves handles that for us. 
+       */
+    Bitboard enemyPieces = getAllPiecesByColor(Players::getEnemy(currentTurn));
+    for (Move& m : moves) {
+        Bitboard target = Bitboards::oneAt(m.to);
+        if (enemyPieces & target) {
+            m.isCapture = true;
+        }
+    }
+
+    generatePawnMoves(moves);
+
     return moves;
 }
 
@@ -195,7 +235,7 @@ void Chessboard::generatePawnMoves(std::vector<Move>& moves) {
     Rank startingRank = currentTurn == Player::WHITE ? RANK_2 : RANK_7;
     while (pawns) {
         Square from = Bitboards::popLSB(pawns);
-        Bitboard movesBoard = currentTurn == Player::WHITE ? Bitboards::PAWN_MOVES_WHITE[from] : Bitboards::PAWN_MOVES_BLACK[from];
+        Bitboard movesBoard = currentTurn == Player::WHITE ? Bitboards::oneAt((Square)(from + 8)) : Bitboards::oneAt((Square)(from - 8));
         movesBoard = movesBoard & ~allPieces;
         Bitboard attacksBoard = currentTurn == Player::WHITE ? Bitboards::PAWN_ATTACKS_WHITE[from] : Bitboards::PAWN_ATTACKS_BLACK[from];
         attacksBoard = attacksBoard & enemyPieces;
@@ -221,13 +261,13 @@ void Chessboard::generatePawnMoves(std::vector<Move>& moves) {
         while (attacksBoard) {
             Square to = Bitboards::popLSB(attacksBoard);
             if (Squares::getRank(to) == promoteRank) {
-                moves.push_back({ from, to, Piece::KNIGHT });
-                moves.push_back({ from, to, Piece::BISHOP });
-                moves.push_back({ from, to, Piece::ROOK });
-                moves.push_back({ from, to, Piece::QUEEN });
+                moves.push_back({ from, to, Piece::KNIGHT, true /* isCapture */});
+                moves.push_back({ from, to, Piece::BISHOP, true });
+                moves.push_back({ from, to, Piece::ROOK, true });
+                moves.push_back({ from, to, Piece::QUEEN, true });
             }
             else {
-                moves.push_back({ from, to });
+                moves.push_back({ from, to, Piece::PIECE_NONE, true});
             }
         }
     }
@@ -360,7 +400,9 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
         pieces[currentTurn + m.promotion] |= toBB;  // promote pawn
     }
 
+    bool isCapture = false;
     if (toPiece != Piece::PIECE_NONE) {
+        isCapture = true;
         // if this move is a capture, remove enemy piece
         pieces[Players::getEnemy(currentTurn) + toPiece] &= ~toBB;
 
@@ -382,6 +424,7 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
         }
     }
     else if (fromPiece == Piece::PAWN && m.to == enPassantTarget) {
+        isCapture = true;
         // if this move is an en passant, remove enemy pawn
         Rank r = Squares::getRank(enPassantTarget);
         File f = Squares::getFile(enPassantTarget);
@@ -446,9 +489,23 @@ MoveUndoInfo Chessboard::makeMove(Move m) {
     else {
         enPassantTarget = Square::SQUARE_NONE;
     }
-    currentTurn = Players::getEnemy(currentTurn);
 
-    return { m, toPiece, oldCastleAbility, oldEnPassantTarget };
+    if (currentTurn == Player::BLACK) {
+        fullMoveNumber++;
+    }
+
+    int oldHalfMoveClock = halfMoveClock;
+    if (isCapture || fromPiece == Piece::PAWN) {
+        halfMoveClock = 0;
+    }
+    else {
+        halfMoveClock++;
+    }
+
+    currentTurn = Players::getEnemy(currentTurn);
+    
+
+    return { m, toPiece, oldCastleAbility, oldEnPassantTarget, oldHalfMoveClock };
 }
 
 void Chessboard::undoMove(MoveUndoInfo m) {
@@ -498,8 +555,13 @@ void Chessboard::undoMove(MoveUndoInfo m) {
         }
     }
 
+    if (currentTurn == Player::BLACK) {
+        fullMoveNumber--;
+    }
+
     castleAbility = m.castleAbility;
     enPassantTarget = m.enPassantTarget;
+    halfMoveClock = m.halfMoveClock;
 }
 
 unsigned long Chessboard::perft(int depth) {
@@ -514,6 +576,23 @@ unsigned long Chessboard::perft(int depth) {
     for (Move& m : moves) {
         MoveUndoInfo moveInfo = makeMove(m);
         numMoves += perft(depth - 1);
+        undoMove(moveInfo);
+    }
+
+    return numMoves;
+}
+
+unsigned long Chessboard::psuedolegalPerft(int depth) {
+    unsigned long numMoves = 0;
+    std::vector<Move> moves = generateAllPseudolegalMoves();
+    if (depth == 0) {
+        return 1;
+    }
+    for (Move& m : moves) {
+        MoveUndoInfo moveInfo = makeMove(m);
+        if (!isChecked(Players::getEnemy(currentTurn))) {
+            numMoves += psuedolegalPerft(depth - 1);
+        }
         undoMove(moveInfo);
     }
 
@@ -538,16 +617,105 @@ unsigned long Chessboard::verbosePerft(int depth) {
     return numMoves;
 }
 
+std::string Chessboard::toFEN() {
+    std::stringstream out;
+    for (int r = RANK_8; r >= RANK_1; r--) {
+        int numEmpties = 0;
+        bool isEmptySquare;
+        for (int f = FILE_A; f <= FILE_H; f++) {
+            isEmptySquare = false;
+            char piece;
+            if (Bitboards::contains(pieces[Player::WHITE + Piece::PAWN], Squares::fromRankFile(r, f))) {
+                piece = 'P';
+            } 
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::PAWN], Squares::fromRankFile(r, f))) {
+                piece = 'p';
+            } 
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::KNIGHT], Squares::fromRankFile(r, f))) {
+                piece = 'N';
+            }
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::KNIGHT], Squares::fromRankFile(r, f))) {
+                piece = 'n';
+            }
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::BISHOP], Squares::fromRankFile(r, f))) {
+                piece = 'B';
+            }
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::BISHOP], Squares::fromRankFile(r, f))) {
+                piece = 'b';
+            }
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::ROOK], Squares::fromRankFile(r, f))) {
+                piece = 'R';
+            }
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::ROOK], Squares::fromRankFile(r, f))) {
+                piece = 'r';
+            }
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::QUEEN], Squares::fromRankFile(r, f))) {
+                piece = 'Q';
+            }
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::QUEEN], Squares::fromRankFile(r, f))) {
+                piece = 'q';
+            }
+            else if (Bitboards::contains(pieces[Player::WHITE + Piece::KING], Squares::fromRankFile(r, f))) {
+                piece = 'K';
+            }
+            else if (Bitboards::contains(pieces[Player::BLACK + Piece::KING], Squares::fromRankFile(r, f))) {
+                piece = 'k';
+            }
+            else {
+                isEmptySquare = true;
+                numEmpties++;
+            }
+
+            if (!isEmptySquare) {
+                if (numEmpties != 0) {
+                    out << '0' + numEmpties;
+                    numEmpties = 0;
+                }
+                out << piece;
+            }
+        }
+        
+        out << "/";
+    }
+
+    out.seekp(-1, out.cur); // remove extra '/' at the end
+    out << " "; 
+
+    // current turn
+    out << (currentTurn == Player::WHITE ? 'w' : 'b');
+    out << " ";
+
+    // castle rights
+    out << (castleAbility.wKingside  ? "K" : "");
+    out << (castleAbility.wQueenside ? "Q" : "");
+    out << (castleAbility.bKingside  ? "k" : "");
+    out << (castleAbility.bQueenside ? "q" : "");
+    out << " ";
+
+    // en passant
+    out << (enPassantTarget == Square::SQUARE_NONE ? "-" : Squares::toAlgebraic(enPassantTarget));
+    out << " ";
+
+    // half move clock
+    out << std::to_string(halfMoveClock);
+    out << " ";
+
+    // full move number
+    out << std::to_string(fullMoveNumber);
+
+    return out.str();
+}
+
 std::string Chessboard::toString() {
     std::string out = "";
     for (int r = RANK_8; r >= RANK_1; r--) {
         for (int f = FILE_A; f <= FILE_H; f++) {
             if (Bitboards::contains(pieces[Player::WHITE + Piece::PAWN], Squares::fromRankFile(r, f))) {
                 out += "P";
-            } 
+            }
             else if (Bitboards::contains(pieces[Player::BLACK + Piece::PAWN], Squares::fromRankFile(r, f))) {
                 out += "p";
-            } 
+            }
             else if (Bitboards::contains(pieces[Player::WHITE + Piece::KNIGHT], Squares::fromRankFile(r, f))) {
                 out += "N";
             }
