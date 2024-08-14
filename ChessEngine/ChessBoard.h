@@ -90,12 +90,6 @@ private:
     Bitboard getAllPiecesByColor(Player color);
 
     /***
-     * Get the type of a piece at a given square given that it is of a
-     * certain color
-     */
-    Piece getPieceTypeAtSquareGivenColor(Square s, Player player);
-
-    /***
      * Return true if a given player is attacking a specified square.
      */
     bool isAttacking(Player player, Square sq);
@@ -132,8 +126,10 @@ public:
     int countPieces(Player player, Piece piece);
 
     /***
-     * 
+     * Get the type of a piece at a given square given that it is of a
+     * certain color
      */
+    Piece getPieceTypeAtSquareGivenColor(Square s, Player player);
 
     /***
      * Generate all pseudolegal moves for the current position for the current player

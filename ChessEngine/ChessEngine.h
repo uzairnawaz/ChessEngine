@@ -1,12 +1,21 @@
 #pragma once
 
+#include <algorithm>
+#include <random>
+
 #include "Chessboard.h"
 
 class ChessEngine
 {
 private:
+    std::mt19937_64 rng;
 
     bool debug = false;
+
+    static const int WHITE_CHECKMATE = INT_MAX / 2;
+    static const int BLACK_CHECKMATE = -(INT_MAX / 2);
+
+    static const int pieceValues[];
 
     /***
      * Perform alpha beta pruning to evaluate a position to a certain depth.
@@ -28,6 +37,13 @@ private:
      * Moves that are expected to be better are placed earlier in the list
      */
     std::vector<Move> generateSortedMoves();
+
+    /***
+     * Applies heuristics to determine how good a move is expected to be.
+     * Returns a relative score used to compare different moves against each other
+     * based on these heuristics.
+     */
+    int predictMoveScore(Move m);
 
 public:
     Chessboard board;

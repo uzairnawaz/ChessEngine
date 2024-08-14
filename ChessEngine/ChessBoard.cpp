@@ -565,11 +565,11 @@ void Chessboard::undoMove(MoveUndoInfo m) {
 }
 
 unsigned long Chessboard::perft(int depth) {
-    unsigned long numMoves = 0;
-    std::vector<Move> moves = generateAllLegalMoves();
     if (depth == 0) {
         return 1;
     }
+    unsigned long numMoves = 0;
+    std::vector<Move> moves = generateAllLegalMoves();
     if (depth == 1) {
         return moves.size();
     }
@@ -583,11 +583,11 @@ unsigned long Chessboard::perft(int depth) {
 }
 
 unsigned long Chessboard::psuedolegalPerft(int depth) {
-    unsigned long numMoves = 0;
-    std::vector<Move> moves = generateAllPseudolegalMoves();
     if (depth == 0) {
         return 1;
     }
+    unsigned long numMoves = 0;
+    std::vector<Move> moves = generateAllPseudolegalMoves();
     for (Move& m : moves) {
         MoveUndoInfo moveInfo = makeMove(m);
         if (!isChecked(Players::getEnemy(currentTurn))) {

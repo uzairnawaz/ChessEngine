@@ -160,8 +160,6 @@ TEST(PERFT, StartingPosition) {
     EXPECT_EQ(c.perft(3), 8902);
     EXPECT_EQ(c.perft(4), 197281);
     EXPECT_EQ(c.perft(5), 4865609);
-    
-    //c.perft(6);
 }
 
 TEST(PERFT, Kiwipete) {

@@ -1,8 +1,18 @@
 
 #include <iostream>
 #include <sstream>
+#include <random>
 
 #include "ChessEngine.h"
+
+const int ChessEngine::pieceValues[] = {
+       100,             // pawn
+       300,             // knight
+       300,             // bishop
+       500,             // rook
+       900,             // queen
+       WHITE_CHECKMATE  // king
+};
 
 ChessEngine::ChessEngine() {
     Bitboards::initPieceMoveBoards();
@@ -12,24 +22,20 @@ int ChessEngine::evaluate() {
     // if its our turn and the enemy king is already under attack, we win!
     // this is used to prevent choosing illegal moves
     if (board.isChecked(Players::getEnemy(board.getTurn()))) {
-        return board.getTurn() == Player::WHITE ? INT_MAX : INT_MIN;
+        return board.getTurn() == Player::WHITE ? WHITE_CHECKMATE : BLACK_CHECKMATE;
     }
 
     int eval = 0;
     
     // evaluate based on piece values:
-    int pieceValues[] = {
-        100,             // pawn
-        300,             // knight
-        300,             // bishop
-        500,             // rook
-        900,             // queen
-        INT_MAX / 2      // king
-    };
     for (int p = Piece::PAWN; p <= Piece::KING; p++) {
         eval += board.countPieces(Player::WHITE, (Piece)p) * pieceValues[p];
         eval -= board.countPieces(Player::BLACK, (Piece)p) * pieceValues[p];
     }
+
+    
+    std::uniform_int_distribution<int> dist(-5, 5);
+    eval += dist(rng);
 
     return eval;
 }
@@ -62,25 +68,35 @@ int ChessEngine::evalAtDepth(int depth, int alpha, int beta) {
     if (moves.size() == 0) {
         if (board.isChecked(board.getTurn())) {
             if (board.getTurn() == Player::WHITE) {
-                return INT_MAX;
+                return BLACK_CHECKMATE;
             }
-            return INT_MIN;
+            return WHITE_CHECKMATE;
         }
         return 0;
     }
+
     int best = board.getTurn() == Player::WHITE ? INT_MIN : INT_MAX; // initialize to worst case
     int numMovesTested = 0;
     for (Move& move : moves) {
         MoveUndoInfo moveInfo = board.makeMove(move);
+        int eval = evalAtDepth(depth - 1, alpha, beta);
         if (board.getTurn() == Player::BLACK) { // white just moved
             // we want to maximize eval function
-            int eval = evalAtDepth(depth - 1, best, beta);
-            best = eval > best ? eval : best;
+            best = best > eval ? best : eval;
+            if (best > beta) {
+                board.undoMove(moveInfo);
+                return best;
+            }
+            alpha = best > alpha ? best : alpha;
         }
         else { // black just moved
             // we want to minimize eval function
-            int eval = evalAtDepth(depth - 1, alpha, best);
-            best = eval < best ? eval : best;
+            best = best < eval ? best : eval;
+            if (best < alpha) {
+                board.undoMove(moveInfo);
+                return best;
+            }
+            beta = best < beta ? best : beta;
         }
         board.undoMove(moveInfo);
     }
@@ -89,8 +105,32 @@ int ChessEngine::evalAtDepth(int depth, int alpha, int beta) {
 }
 
 std::vector<Move> ChessEngine::generateSortedMoves() {
-    std::vector<Move> moves = board.generateAllPseudolegalMoves();
+    std::vector<Move> moves = board.generateAllLegalMoves();
+    std::sort(moves.begin(), moves.end(), 
+        [this](Move& m1, Move& m2) {
+            return predictMoveScore(m1) < predictMoveScore(m2);
+        }
+    );
     return moves;
+}
+
+int ChessEngine::predictMoveScore(Move m) {
+    int score = 0;
+    
+    Piece fromPiece = board.getPieceTypeAtSquareGivenColor(m.from, board.getTurn());
+    Piece toPiece = board.getPieceTypeAtSquareGivenColor(m.to, Players::getEnemy(board.getTurn()));
+
+    // prioritize capturing high value pieces with low value pieces
+    if (toPiece != Piece::PIECE_NONE) {
+        score += 10 * pieceValues[fromPiece] - pieceValues[toPiece]; 
+    }
+
+    // incentivize pawn promotion
+    if (m.promotion != Piece::PIECE_NONE) {
+        score += pieceValues[m.promotion];
+    }
+
+    return score;
 }
 
 void ChessEngine::startUCI() {
