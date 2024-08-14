@@ -33,7 +33,8 @@ int ChessEngine::evaluate() {
         eval -= board.countPieces(Player::BLACK, (Piece)p) * pieceValues[p];
     }
 
-    
+    // add a little bit of randomness just to make moves more interesting when 
+    // there is no piece value differences
     std::uniform_int_distribution<int> dist(-5, 5);
     eval += dist(rng);
 
@@ -197,7 +198,7 @@ void ChessEngine::processUCICommand(std::vector<std::string>& tokens) {
 
         if (movesToken != 0) {
             for (int i = movesToken + 1; i < tokens.size(); i++) {
-                Move m = { Squares::fromAlgebraic(tokens[i].substr(0, 2).c_str()), Squares::fromAlgebraic(tokens[i].substr(4, 2).c_str()) };
+                Move m = { Squares::fromAlgebraic(tokens[i].substr(0, 2).c_str()), Squares::fromAlgebraic(tokens[i].substr(2, 2).c_str()) };
                 if (tokens[i].size() == 5) {
                     switch (tokens[i][5]) {
                     case 'p':
@@ -220,8 +221,12 @@ void ChessEngine::processUCICommand(std::vector<std::string>& tokens) {
                 board.makeMove(m);
             }
         }
+
+        std::cout << board.toString();
     }
     else if (tokens[0] == "go") {
+        Move m = search(5);
+        print("bestmove " + Moves::toString(m));
         if (tokens[1] == "searchmoves") {
 
         }
@@ -266,7 +271,7 @@ void ChessEngine::processUCICommand(std::vector<std::string>& tokens) {
 
     }
     else if (tokens[0] == "quit") {
-
+        exit(1);
     }
 }
 
