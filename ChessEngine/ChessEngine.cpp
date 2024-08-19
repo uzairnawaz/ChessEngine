@@ -123,7 +123,7 @@ int ChessEngine::predictMoveScore(Move m) {
 
     // prioritize capturing high value pieces with low value pieces
     if (toPiece != Piece::PIECE_NONE) {
-        score += 10 * pieceValues[fromPiece] - pieceValues[toPiece]; 
+        score += 10 * pieceValues[toPiece] - pieceValues[fromPiece]; 
     }
 
     // incentivize pawn promotion
@@ -222,7 +222,6 @@ void ChessEngine::processUCICommand(std::vector<std::string>& tokens) {
             }
         }
 
-        std::cout << board.toString();
     }
     else if (tokens[0] == "go") {
         Move m = search(5);
