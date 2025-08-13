@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "../ChessEngine/Chessboard.h"
+#include "../ChessEngineLib/Chessboard.h"
 
 class ChessTestEnvironment : public ::testing::Environment {
 protected:

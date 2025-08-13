@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-#include "ChessEngine.h"
+#include "../ChessEngineLib/ChessEngine.h"
 
 int main()
 {
