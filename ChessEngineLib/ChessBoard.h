@@ -82,17 +82,17 @@ private:
     /***
      * Return a bitboard containing all of the pieces on the board.
      */
-    Bitboard getAllPieces() { return getAllPiecesByColor(Player::WHITE) | getAllPiecesByColor(Player::BLACK); }
+    Bitboard getAllPieces() const { return getAllPiecesByColor(Player::WHITE) | getAllPiecesByColor(Player::BLACK); }
 
     /***
      * Return a bitboard containing all of the pieces of a certain color
      */
-    Bitboard getAllPiecesByColor(Player color);
+    Bitboard getAllPiecesByColor(Player color) const;
 
     /***
      * Return true if a given player is attacking a specified square.
      */
-    bool isAttacking(Player player, Square sq);
+    bool isAttacking(Player player, Square sq) const;
 
 public:
     /***
@@ -108,28 +108,28 @@ public:
     /***
      * Returns the current player
      */
-    Player getTurn();
+    Player getTurn() const;
 
     /***
      * Return a string representation of the board, used for debugging
      */
-    std::string toString();
+    std::string toString() const;
 
     /***
      * Return a FEN string representation of the board, used for debugging
      */
-    std::string toFEN();
+    std::string toFEN() const;
 
     /***
      * Count the number of pieces of a certain type and color
      */
-    int countPieces(Player player, Piece piece);
+    int countPieces(Player player, Piece piece) const;
 
     /***
      * Get the type of a piece at a given square given that it is of a
      * certain color
      */
-    Piece getPieceTypeAtSquareGivenColor(Square s, Player player);
+    Piece getPieceTypeAtSquareGivenColor(Square s, Player player) const;
 
     /***
      * Generate all pseudolegal moves for the current position for the current player
@@ -155,7 +155,7 @@ public:
     /***
      * Return true if a given player is under check
      */
-    bool isChecked(Player p);
+    bool isChecked(Player p) const;
 
     /***
      * Counts the number of legal moves at a certain depth.

@@ -137,15 +137,15 @@ Chessboard::Chessboard(std::string fen) {
     fullMoveNumber = std::stoi(halfMoveClockAndNumMoves.substr(spaceIdx));
 }
 
-Player Chessboard::getTurn() {
+Player Chessboard::getTurn() const {
     return currentTurn;
 }
 
-int Chessboard::countPieces(Player player, Piece piece) {
+int Chessboard::countPieces(Player player, Piece piece) const {
     return __popcnt64(pieces[player + piece]);
 }
 
-Bitboard Chessboard::getAllPiecesByColor(Player color) {
+Bitboard Chessboard::getAllPiecesByColor(Player color) const {
     Bitboard out = 0;
     for (int p = Piece::PAWN; p <= Piece::KING; p++) {
         out |= pieces[color + p];
@@ -196,7 +196,7 @@ std::vector<Move> Chessboard::generateAllPseudolegalMoves() {
     return moves;
 }
 
-bool Chessboard::isAttacking(Player player, Square sq) {
+bool Chessboard::isAttacking(Player player, Square sq) const {
     Bitboard allPieces = getAllPieces();
     // check pawn attacks
     Bitboard* pawnAttacks = player == Player::WHITE ? Bitboards::PAWN_ATTACKS_BLACK : Bitboards::PAWN_ATTACKS_WHITE;
@@ -220,7 +220,7 @@ bool Chessboard::isAttacking(Player player, Square sq) {
     return false;
 }
 
-bool Chessboard::isChecked(Player p) {
+bool Chessboard::isChecked(Player p) const {
     unsigned long kingLoc;
     _BitScanForward64(&kingLoc, pieces[p + Piece::KING]);
     return isAttacking(Players::getEnemy(p), (Square)kingLoc);
@@ -373,7 +373,7 @@ void Chessboard::generateQueenMoves(std::vector<Move>& moves) {
     }
 }
 
-Piece Chessboard::getPieceTypeAtSquareGivenColor(Square s, Player player) {
+Piece Chessboard::getPieceTypeAtSquareGivenColor(Square s, Player player) const {
     Piece piece = Piece::PAWN;
     Bitboard bb = Bitboards::oneAt(s);
     while (piece != Piece::PIECE_NONE && (pieces[player + piece] & bb) == 0) {
@@ -617,7 +617,7 @@ unsigned long Chessboard::verbosePerft(int depth) {
     return numMoves;
 }
 
-std::string Chessboard::toFEN() {
+std::string Chessboard::toFEN() const {
     std::stringstream out;
     for (int r = RANK_8; r >= RANK_1; r--) {
         int numEmpties = 0;
@@ -706,7 +706,7 @@ std::string Chessboard::toFEN() {
     return out.str();
 }
 
-std::string Chessboard::toString() {
+std::string Chessboard::toString() const {
     std::string out = "";
     for (int r = RANK_8; r >= RANK_1; r--) {
         for (int f = FILE_A; f <= FILE_H; f++) {

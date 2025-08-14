@@ -21,9 +21,6 @@
     <ClCompile Include="ChessBoard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ChessEngine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="magics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
